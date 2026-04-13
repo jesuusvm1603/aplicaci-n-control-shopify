@@ -1160,6 +1160,9 @@ function bootApp() {
   document.getElementById('auth-screen').classList.add('hidden');
   // Reload per-user state
   state = loadState();
+  // Always recompute auto fields on boot so they're fresh with current creative/campaign/product data
+  syncFinanceFromSales();
+  saveState();
   updateSidebarUser();
   // Pre-fill Shopify URL from profile
   const urlInput = document.getElementById('shopify-url-input');
@@ -2674,38 +2677,75 @@ function renderFinanceDaily() {
   const cols = ['rev','cpc','visits','orders','adSpend','cogs'];
   const tbody = document.getElementById('finance-daily-tbody');
   tbody.innerHTML = sorted.map(d => {
-    const autoRev   = +d.autoRev||0;
-    const autoCogs  = +d.autoCogs||0;
-    const autoOrd   = +d.autoOrders||0;
-    const autoAds   = +d.autoAdSpend||0;
-    const rev    = (+d.rev||0) + autoRev;
-    const cogs   = (+d.cogs||0) + autoCogs;
+    const autoRev  = +d.autoRev||0;
+    const autoCogs = +d.autoCogs||0;
+    const autoOrd  = +d.autoOrders||0;
+    const autoAds  = +d.autoAdSpend||0;
+    const rev    = (+d.rev||0)     + autoRev;
+    const cogs   = (+d.cogs||0)   + autoCogs;
     const ads    = (+d.adSpend||0) + autoAds;
-    const orders = (+d.orders||0) + autoOrd;
+    const orders = (+d.orders||0)  + autoOrd;
     const visits = +d.visits||0;
-    const aov = orders > 0 ? rev/orders : 0;
-    const cr = visits > 0 ? orders/visits*100 : 0;
-    const cogsPct = rev > 0 ? cogs/rev*100 : 0;
-    const adsPct = rev > 0 ? ads/rev*100 : 0;
-    const com3 = rev*0.03;
-    const com6 = rev*0.06;
-    const profit = rev - cogs - ads - com3 - cf;
+    const aov      = orders > 0 ? rev/orders : 0;
+    const cr       = visits > 0 ? orders/visits*100 : 0;
+    const cogsPct  = rev > 0 ? cogs/rev*100 : 0;
+    const adsPct   = rev > 0 ? ads/rev*100 : 0;
+    const com3     = rev*0.03;
+    const com6     = rev*0.06;
+    const profit   = rev - cogs - ads - com3 - cf;
     const profitPct = rev > 0 ? profit/rev*100 : 0;
-    const roas = ads > 0 ? rev/ads : 0;
-    const autoRevTag = autoRev > 0 ? `<span title="Auto desde creativos/campañas: +${fmtEur(autoRev)} ingresos" style="font-size:10px;color:var(--accent2);margin-left:4px;">⚡</span>` : '';
-    const autoAdsTag = autoAds > 0 ? `<span title="Auto desde creativos/campañas: +${fmtEur(autoAds)} gasto ads" style="font-size:10px;color:var(--accent2);margin-left:4px;">⚡</span>` : '';
+    const roas     = ads > 0 ? rev/ads : 0;
+
+    // Each editable cell shows the combined total prominently.
+    // When auto data exists, a ⚡ line shows the auto portion and the
+    // manual input remains for adding a manual override.
+    const revCell = autoRev > 0
+      ? `<b style="font-size:13px;">${fmtEur(rev)}</b>
+         <div style="font-size:10px;color:var(--accent2);margin:1px 0;">⚡ auto ${fmtEur(autoRev)}</div>
+         <input type="number" value="${d.rev||''}" placeholder="+ manual"
+           onchange="updateDay('${ym}','${d.date}','rev',this.value)"
+           style="width:72px;font-size:11px;" title="Ingresos manuales (el auto se suma automáticamente)">`
+      : `<input type="number" value="${d.rev||''}" placeholder="0"
+           onchange="updateDay('${ym}','${d.date}','rev',this.value)" style="width:80px;">`;
+
+    const cogsCell = autoCogs > 0
+      ? `<b style="font-size:13px;">${fmtEur(cogs)}</b>
+         <div style="font-size:10px;color:var(--accent2);margin:1px 0;">⚡ auto ${fmtEur(autoCogs)}</div>
+         <input type="number" value="${d.cogs||''}" placeholder="+ manual"
+           onchange="updateDay('${ym}','${d.date}','cogs',this.value)"
+           style="width:72px;font-size:11px;" title="COGS manual (el auto se suma automáticamente)">`
+      : `<input type="number" value="${d.cogs||''}" placeholder="0"
+           onchange="updateDay('${ym}','${d.date}','cogs',this.value)" style="width:80px;">`;
+
+    const adsCell = autoAds > 0
+      ? `<b style="font-size:13px;">${fmtEur(ads)}</b>
+         <div style="font-size:10px;color:var(--accent2);margin:1px 0;">⚡ auto ${fmtEur(autoAds)}</div>
+         <input type="number" value="${d.adSpend||''}" placeholder="+ manual"
+           onchange="updateDay('${ym}','${d.date}','adSpend',this.value)"
+           style="width:72px;font-size:11px;" title="Gasto Ads manual (el auto se suma automáticamente)">`
+      : `<input type="number" value="${d.adSpend||''}" placeholder="0"
+           onchange="updateDay('${ym}','${d.date}','adSpend',this.value)" style="width:80px;">`;
+
+    const ordCell = autoOrd > 0
+      ? `<b style="font-size:13px;">${orders}</b>
+         <div style="font-size:10px;color:var(--accent2);margin:1px 0;">⚡ auto ${autoOrd}</div>
+         <input type="number" value="${d.orders||''}" placeholder="+ manual"
+           onchange="updateDay('${ym}','${d.date}','orders',this.value)"
+           style="width:55px;font-size:11px;" title="Pedidos manuales">`
+      : `<input type="number" value="${d.orders||''}" placeholder="0"
+           onchange="updateDay('${ym}','${d.date}','orders',this.value)" style="width:60px;">`;
 
     return `<tr>
       <td>${d.date.slice(5)}</td>
-      <td><input type="number" value="${d.rev||''}" placeholder="0" onchange="updateDay('${ym}','${d.date}','rev',this.value)" style="width:80px;">${autoRevTag}</td>
+      <td>${revCell}</td>
       <td><input type="number" value="${d.cpc||''}" placeholder="0" onchange="updateDay('${ym}','${d.date}','cpc',this.value)" style="width:60px;"></td>
       <td><input type="number" value="${d.visits||''}" placeholder="0" onchange="updateDay('${ym}','${d.date}','visits',this.value)" style="width:70px;"></td>
-      <td><input type="number" value="${d.orders||''}" placeholder="0" onchange="updateDay('${ym}','${d.date}','orders',this.value)" style="width:60px;"></td>
+      <td>${ordCell}</td>
       <td>${fmtEur(aov)}</td>
       <td class="${cr>=2?'text-green':cr>=1?'text-yellow':'text-red'}">${fmtPct(cr)}</td>
-      <td><input type="number" value="${d.cogs||''}" placeholder="0" onchange="updateDay('${ym}','${d.date}','cogs',this.value)" style="width:80px;"></td>
+      <td>${cogsCell}</td>
       <td class="${cogsPct<=40?'text-green':cogsPct<=60?'text-yellow':'text-red'}">${fmtPct(cogsPct)}</td>
-      <td><input type="number" value="${d.adSpend||''}" placeholder="0" onchange="updateDay('${ym}','${d.date}','adSpend',this.value)" style="width:80px;">${autoAdsTag}</td>
+      <td>${adsCell}</td>
       <td class="${adsPct<=30?'text-green':adsPct<=50?'text-yellow':'text-red'}">${fmtPct(adsPct)}</td>
       <td>${fmtEur(com3)}</td>
       <td>${fmtEur(com6)}</td>
