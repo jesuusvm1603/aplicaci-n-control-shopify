@@ -1534,14 +1534,14 @@ function renderDashboard() {
 
   // Top profitable products table
   const sorted = [...state.products]
-    .filter(p=>p.status==='activo')
-    .map(p=>({...p,
-      marginVal:(+p.price||0)-(+p.cog||0),
-      marginPct:p.price>0?((+p.price-(+p.cog||0))/(+p.price))*100:0,
-      totUnits: getProductTotalSales(p.id)
+    .filter(p => p.status === 'activo' && (+p.cog||0) > 0)  // exclude products without COG
+    .map(p => ({...p,
+      marginVal: (+p.price||0) - (+p.cog||0),
+      marginPct: p.price > 0 ? ((+p.price - (+p.cog||0)) / (+p.price)) * 100 : 0,
+      totUnits:  getProductTotalSales(p.id)
     }))
-    .sort((a,b)=>b.marginVal-a.marginVal)
-    .slice(0,8);
+    .sort((a,b) => b.marginVal - a.marginVal)
+    .slice(0, 8);
   const ptbody = document.getElementById('dash-products-table');
   ptbody.innerHTML = sorted.length ? sorted.map(p=>`
     <tr>
@@ -1552,7 +1552,7 @@ function renderDashboard() {
       <td class="${p.marginPct>=30?'text-green':p.marginPct>=15?'text-yellow':'text-red'}">${fmtPct(p.marginPct)}</td>
       <td>${p.totUnits > 0 ? `<span class="product-sales-badge">📦 ${p.totUnits}</span>` : '<span class="text-muted">—</span>'}</td>
     </tr>`).join('') :
-    '<tr><td colspan="6" class="text-muted" style="text-align:center;padding:24px;">Sin productos activos</td></tr>';
+    '<tr><td colspan="6" class="text-muted" style="text-align:center;padding:24px;">Sin productos activos con COG introducido</td></tr>';
 
   // Creatives table — show all creatives with data, sorted by ROAS desc
   const ctbody = document.getElementById('dash-creatives-table');
@@ -1693,12 +1693,19 @@ function renderCatalog() {
   }
 
   grid.innerHTML = products.map(p => {
-    const margin = (+p.price||0) - (+p.cog||0);
-    const marginPct = p.price>0 ? margin/p.price*100 : 0;
+    const hasCog   = (+p.cog||0) > 0;
+    const margin    = (+p.price||0) - (+p.cog||0);
+    const marginPct = hasCog && p.price > 0 ? margin/p.price*100 : null;
     const img = (p.images&&p.images[0]) ? p.images[0] : '';
     const totalSales = getProductTotalSales(p.id);
     const profit = getProductProfit(p.id);
     const pCat = p.category && p.category.trim() ? p.category.trim() : 'Sin categoría';
+    const marginDisplay = marginPct !== null
+      ? `<span class="${marginPct>=30?'text-green':marginPct>=15?'text-yellow':'text-red'}">${fmtPct(marginPct)}</span>`
+      : `<span style="color:var(--yellow);" title="Introduce el COG para calcular el margen">— sin COG</span>`;
+    const cogDisplay = hasCog
+      ? `COG: ${fmtEur(p.cog)} · Margen: ${marginDisplay}`
+      : `<span style="color:var(--yellow);font-weight:600;">⚠ Falta COG del proveedor</span>`;
     return `<div class="product-card" onclick="editProduct('${p.id}')">
       ${img ? `<img src="${img}" alt="${p.title}" loading="lazy" onerror="this.style.display='none'">` :
         `<div style="height:180px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:40px;">👗</div>`}
@@ -1709,7 +1716,7 @@ function renderCatalog() {
           ${statusBadge(p.status||'activo')}
         </div>
         <div style="font-size:12px;color:var(--text2);margin-top:4px;">
-          COG: ${fmtEur(p.cog)} · Margen: <span class="${marginPct>=30?'text-green':marginPct>=15?'text-yellow':'text-red'}">${fmtPct(marginPct)}</span>
+          ${cogDisplay}
         </div>
         <div style="font-size:11px;color:var(--text2);margin-top:2px;">${pCat}${p.supplier?' · '+p.supplier:''}</div>
         ${totalSales > 0 ? `
