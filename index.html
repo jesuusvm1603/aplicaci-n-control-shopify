@@ -1,0 +1,1735 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Catalina Castellanos - Control Panel</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #0f1117;
+  --bg2: #1a1d27;
+  --bg3: #242736;
+  --border: #2e3248;
+  --text: #e2e8f0;
+  --text2: #94a3b8;
+  --accent: #6366f1;
+  --accent2: #818cf8;
+  --green: #22c55e;
+  --green2: #86efac;
+  --yellow: #eab308;
+  --orange: #f97316;
+  --red: #ef4444;
+  --sidebar: 240px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;display:flex;min-height:100vh;font-size:14px;}
+
+/* SIDEBAR */
+#sidebar{width:var(--sidebar);background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:100;transition:.3s;}
+.sidebar-logo{padding:20px 16px;border-bottom:1px solid var(--border);}
+.sidebar-logo h2{font-size:13px;color:var(--accent2);font-weight:700;letter-spacing:1px;text-transform:uppercase;}
+.sidebar-logo p{font-size:11px;color:var(--text2);margin-top:2px;}
+.nav-menu{flex:1;padding:12px 0;overflow-y:auto;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 16px;cursor:pointer;color:var(--text2);transition:.2s;border-left:3px solid transparent;font-size:13px;}
+.nav-item:hover{background:var(--bg3);color:var(--text);}
+.nav-item.active{background:var(--bg3);color:var(--accent2);border-left-color:var(--accent);}
+.nav-item .icon{font-size:16px;width:20px;text-align:center;}
+.sidebar-footer{padding:12px 16px;border-top:1px solid var(--border);font-size:11px;color:var(--text2);}
+
+/* MAIN */
+#main{margin-left:var(--sidebar);flex:1;padding:24px;min-height:100vh;}
+.module{display:none;}
+.module.active{display:block;}
+
+/* PAGE HEADER */
+.page-header{margin-bottom:24px;}
+.page-header h1{font-size:22px;font-weight:700;color:var(--text);}
+.page-header p{font-size:13px;color:var(--text2);margin-top:4px;}
+
+/* CARDS */
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px;}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px;}
+.card-label{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
+.card-value{font-size:24px;font-weight:700;color:var(--text);}
+.card-sub{font-size:12px;margin-top:4px;}
+.card-sub.up{color:var(--green);}
+.card-sub.down{color:var(--red);}
+.card-sub.neutral{color:var(--text2);}
+
+/* CHARTS */
+.chart-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:24px;}
+.chart-wrap h3{font-size:14px;font-weight:600;margin-bottom:16px;color:var(--text);}
+.chart-container{position:relative;height:260px;}
+
+/* TABLES */
+.table-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:24px;}
+.table-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.table-header h3{font-size:14px;font-weight:600;}
+table{width:100%;border-collapse:collapse;}
+th{padding:10px 14px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);background:var(--bg3);border-bottom:1px solid var(--border);}
+td{padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(99,102,241,.04);}
+
+/* BADGES */
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;}
+.badge-green{background:rgba(34,197,94,.15);color:var(--green);}
+.badge-yellow{background:rgba(234,179,8,.15);color:var(--yellow);}
+.badge-red{background:rgba(239,68,68,.15);color:var(--red);}
+.badge-blue{background:rgba(99,102,241,.15);color:var(--accent2);}
+.badge-orange{background:rgba(249,115,22,.15);color:var(--orange);}
+.badge-gray{background:rgba(148,163,184,.15);color:var(--text2);}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:7px;border:none;cursor:pointer;font-size:13px;font-weight:500;transition:.2s;}
+.btn-primary{background:var(--accent);color:#fff;}
+.btn-primary:hover{background:var(--accent2);}
+.btn-secondary{background:var(--bg3);color:var(--text);border:1px solid var(--border);}
+.btn-secondary:hover{border-color:var(--accent);}
+.btn-sm{padding:5px 10px;font-size:12px;}
+.btn-danger{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3);}
+.btn-success{background:rgba(34,197,94,.15);color:var(--green);border:1px solid rgba(34,197,94,.3);}
+
+/* FORMS */
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;}
+.form-group{display:flex;flex-direction:column;gap:5px;}
+.form-group label{font-size:12px;color:var(--text2);}
+input,select,textarea{background:var(--bg3);border:1px solid var(--border);border-radius:7px;padding:8px 11px;color:var(--text);font-size:13px;width:100%;outline:none;transition:.2s;}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);}
+input::placeholder{color:var(--text2);}
+select option{background:var(--bg3);}
+.form-panel{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:20px;}
+.form-panel h3{font-size:14px;font-weight:600;margin-bottom:16px;color:var(--text);}
+
+/* ROAS COLORS */
+.roas-great{color:#16a34a;font-weight:700;}
+.roas-good{color:var(--green);font-weight:600;}
+.roas-ok{color:var(--yellow);font-weight:600;}
+.roas-low{color:var(--orange);font-weight:600;}
+.roas-bad{color:var(--red);font-weight:600;}
+.roas-great-bg{background:rgba(22,163,74,.2);}
+.roas-good-bg{background:rgba(34,197,94,.15);}
+.roas-ok-bg{background:rgba(234,179,8,.15);}
+.roas-low-bg{background:rgba(249,115,22,.15);}
+.roas-bad-bg{background:rgba(239,68,68,.15);}
+
+/* MISC */
+.section-row{display:flex;gap:16px;margin-bottom:24px;}
+.section-row .chart-wrap{flex:1;}
+.flex{display:flex;align-items:center;gap:8px;}
+.flex-between{display:flex;align-items:center;justify-content:space-between;}
+.text-green{color:var(--green);}
+.text-red{color:var(--red);}
+.text-yellow{color:var(--yellow);}
+.text-muted{color:var(--text2);}
+.mb8{margin-bottom:8px;}
+.mb16{margin-bottom:16px;}
+.mb24{margin-bottom:24px;}
+.mt8{margin-top:8px;}
+.mt16{margin-top:16px;}
+.empty-state{text-align:center;padding:48px 24px;color:var(--text2);}
+.empty-state .empty-icon{font-size:40px;margin-bottom:12px;}
+.empty-state p{font-size:14px;}
+
+/* PRODUCT CARDS */
+.products-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;margin-bottom:24px;}
+.product-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;cursor:pointer;transition:.2s;}
+.product-card:hover{border-color:var(--accent);transform:translateY(-2px);}
+.product-card img{width:100%;height:180px;object-fit:cover;background:var(--bg3);}
+.product-card-body{padding:12px;}
+.product-card-body h4{font-size:13px;font-weight:600;margin-bottom:4px;color:var(--text);}
+.product-card-meta{display:flex;align-items:center;justify-content:space-between;margin-top:8px;}
+
+/* DRAG DROP */
+.drop-zone{border:2px dashed var(--border);border-radius:10px;padding:40px;text-align:center;transition:.2s;cursor:pointer;}
+.drop-zone:hover,.drop-zone.drag-over{border-color:var(--accent);background:rgba(99,102,241,.05);}
+.drop-zone .icon{font-size:36px;margin-bottom:8px;}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:12px;width:90%;max-width:600px;max-height:85vh;overflow-y:auto;}
+.modal-header{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.modal-header h3{font-size:16px;font-weight:600;}
+.modal-body{padding:20px;}
+.modal-footer{padding:14px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;}
+.close-btn{background:none;border:none;color:var(--text2);cursor:pointer;font-size:18px;padding:4px;}
+
+/* SEMAPHORE */
+.semaphore{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;}
+.sem-green{background:var(--green);}
+.sem-yellow{background:var(--yellow);}
+.sem-red{background:var(--red);}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+::-webkit-scrollbar-thumb:hover{background:var(--accent);}
+
+/* RESPONSIVE */
+@media(max-width:768px){
+  #sidebar{width:60px;}
+  #sidebar .nav-item span,.sidebar-logo p,.sidebar-logo h2{display:none;}
+  #main{margin-left:60px;padding:16px;}
+  .cards-grid{grid-template-columns:1fr 1fr;}
+  .section-row{flex-direction:column;}
+}
+
+/* FINANCE TABLE */
+.finance-table-wrap{overflow-x:auto;}
+.finance-table td input{background:transparent;border:none;padding:4px;width:80px;color:var(--text);}
+.finance-table td input:focus{background:var(--bg3);border-radius:4px;}
+.total-row td{background:var(--bg3);font-weight:700;color:var(--accent2);}
+
+/* TABS */
+.tabs{display:flex;gap:4px;background:var(--bg3);border-radius:8px;padding:4px;margin-bottom:20px;width:fit-content;}
+.tab{padding:7px 16px;border-radius:6px;cursor:pointer;font-size:13px;color:var(--text2);transition:.2s;}
+.tab.active{background:var(--accent);color:#fff;}
+
+/* SEARCH BAR */
+.search-row{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+.search-row input{flex:1;min-width:200px;}
+.search-row select{min-width:140px;}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav id="sidebar">
+  <div class="sidebar-logo">
+    <h2>CC Control</h2>
+    <p>Catalina Castellanos</p>
+  </div>
+  <div class="nav-menu">
+    <div class="nav-item active" onclick="showModule('dashboard')">
+      <span class="icon">📊</span><span>Dashboard</span>
+    </div>
+    <div class="nav-item" onclick="showModule('catalog')">
+      <span class="icon">👗</span><span>Catálogo</span>
+    </div>
+    <div class="nav-item" onclick="showModule('testing')">
+      <span class="icon">🧪</span><span>Testing Creativos</span>
+    </div>
+    <div class="nav-item" onclick="showModule('scaling')">
+      <span class="icon">🚀</span><span>Escalado</span>
+    </div>
+    <div class="nav-item" onclick="showModule('finance')">
+      <span class="icon">💰</span><span>Finanzas</span>
+    </div>
+  </div>
+  <div class="sidebar-footer">v1.0 · localStorage</div>
+</nav>
+
+<!-- MAIN CONTENT -->
+<main id="main">
+
+  <!-- ===== DASHBOARD ===== -->
+  <div id="mod-dashboard" class="module active">
+    <div class="page-header">
+      <h1>Dashboard General</h1>
+      <p id="dash-date">Cargando...</p>
+    </div>
+    <div class="cards-grid" id="dash-cards"></div>
+    <div class="section-row">
+      <div class="chart-wrap">
+        <h3>Profit Diario — Mes Actual</h3>
+        <div class="chart-container"><canvas id="profitChart"></canvas></div>
+      </div>
+      <div class="chart-wrap" style="max-width:320px;">
+        <h3>Distribución de Gastos</h3>
+        <div class="chart-container"><canvas id="expenseChart"></canvas></div>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <div class="table-header">
+        <h3>Productos Más Rentables</h3>
+      </div>
+      <table>
+        <thead><tr><th>Producto</th><th>Precio</th><th>COG</th><th>Margen €</th><th>Margen %</th><th>Estado</th></tr></thead>
+        <tbody id="dash-products-table"></tbody>
+      </table>
+    </div>
+    <div class="table-wrap">
+      <div class="table-header"><h3>Creativos en Test Activos</h3></div>
+      <table>
+        <thead><tr><th>Creativo</th><th>Producto</th><th>Plataforma</th><th>ROAS Total</th><th>Gasto</th><th>Estado</th></tr></thead>
+        <tbody id="dash-creatives-table"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ===== CATALOG ===== -->
+  <div id="mod-catalog" class="module">
+    <div class="page-header flex-between">
+      <div>
+        <h1>Catálogo de Productos</h1>
+        <p>Gestiona tu inventario y costes</p>
+      </div>
+      <div class="flex">
+        <button class="btn btn-secondary" onclick="syncProducts()">🔄 Sincronizar</button>
+        <button class="btn btn-primary" onclick="importShopify()">🛍 Importar desde Shopify</button>
+      </div>
+    </div>
+    <div class="search-row">
+      <input type="text" id="cat-search" placeholder="Buscar productos..." oninput="renderCatalog()">
+      <select id="cat-filter-cat" onchange="renderCatalog()">
+        <option value="">Todas las categorías</option>
+        <option>Vestidos</option><option>Tops</option><option>Pantalones</option>
+        <option>Accesorios</option><option>Zapatos</option><option>Bolsos</option><option>Otros</option>
+      </select>
+      <select id="cat-filter-status" onchange="renderCatalog()">
+        <option value="">Todos los estados</option>
+        <option value="activo">Activo</option>
+        <option value="pausado">Pausado</option>
+        <option value="descatalogado">Descatalogado</option>
+      </select>
+    </div>
+    <div id="catalog-grid" class="products-grid"></div>
+  </div>
+
+  <!-- ===== TESTING ===== -->
+  <div id="mod-testing" class="module">
+    <div class="page-header flex-between">
+      <div>
+        <h1>Testing de Creativos</h1>
+        <p>Seguimiento de rendimiento por creativo</p>
+      </div>
+      <button class="btn btn-primary" onclick="openCreativeModal()">+ Nuevo Creativo</button>
+    </div>
+    <div class="search-row">
+      <input type="text" id="test-search" placeholder="Buscar creativo..." oninput="renderTesting()">
+      <select id="test-filter-status" onchange="renderTesting()">
+        <option value="">Todos los estados</option>
+        <option value="en test">En test</option>
+        <option value="ganador">Ganador</option>
+        <option value="pausado">Pausado</option>
+      </select>
+      <select id="test-filter-product" onchange="renderTesting()">
+        <option value="">Todos los productos</option>
+      </select>
+    </div>
+    <div id="testing-list"></div>
+  </div>
+
+  <!-- ===== SCALING ===== -->
+  <div id="mod-scaling" class="module">
+    <div class="page-header flex-between">
+      <div>
+        <h1>Escalado de Campañas</h1>
+        <p>Importa CSV de Meta Ads y gestiona presupuestos</p>
+      </div>
+      <button class="btn btn-primary" onclick="openCampaignModal()">+ Nueva Campaña</button>
+    </div>
+    <div class="form-panel">
+      <h3>📥 Importar CSV de Meta Ads Manager</h3>
+      <div class="drop-zone" id="csv-drop-zone" onclick="document.getElementById('csv-file-input').click()">
+        <div class="icon">📂</div>
+        <p style="color:var(--text2);margin-bottom:8px;">Arrastra el CSV de Meta Ads aquí o haz clic para seleccionar</p>
+        <p style="font-size:11px;color:var(--text2);">Detección automática de columnas</p>
+      </div>
+      <input type="file" id="csv-file-input" accept=".csv" style="display:none" onchange="handleCSVFile(this.files[0])">
+    </div>
+    <div id="csv-preview" style="display:none" class="table-wrap mb24">
+      <div class="table-header flex-between">
+        <h3>Datos importados de Meta Ads</h3>
+        <button class="btn btn-sm btn-primary" onclick="applyCSVToFinance()">Aplicar a Finanzas</button>
+      </div>
+      <div class="finance-table-wrap"><table id="csv-table"></table></div>
+    </div>
+    <div id="campaigns-list"></div>
+    <div class="form-panel mt16">
+      <h3>📝 Registro de Devoluciones y Reembolsos</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Fecha</label>
+          <input type="date" id="ret-date">
+        </div>
+        <div class="form-group">
+          <label>Producto / Campaña</label>
+          <input type="text" id="ret-desc" placeholder="Descripción">
+        </div>
+        <div class="form-group">
+          <label>Importe €</label>
+          <input type="number" id="ret-amount" placeholder="0.00">
+        </div>
+        <div class="form-group" style="justify-content:flex-end;">
+          <label>&nbsp;</label>
+          <button class="btn btn-danger" onclick="addReturn()">Registrar Devolución</button>
+        </div>
+      </div>
+      <div id="returns-list" class="mt16"></div>
+    </div>
+  </div>
+
+  <!-- ===== FINANCE ===== -->
+  <div id="mod-finance" class="module">
+    <div class="page-header">
+      <h1>Finanzas y Profit</h1>
+      <p>Control financiero completo</p>
+    </div>
+    <div class="tabs">
+      <div class="tab active" onclick="financeTab('daily')">Profit Diario</div>
+      <div class="tab" onclick="financeTab('fixed')">Costes Fijos</div>
+      <div class="tab" onclick="financeTab('liquidity')">Liquidez</div>
+      <div class="tab" onclick="financeTab('monthly')">Resumen Mensual</div>
+    </div>
+
+    <!-- DAILY -->
+    <div id="fin-daily">
+      <div class="flex-between mb16">
+        <div class="flex">
+          <input type="month" id="fin-month-select" onchange="renderFinanceDaily()">
+          <button class="btn btn-secondary btn-sm" onclick="addFinanceDay()">+ Añadir Día</button>
+        </div>
+        <span class="text-muted" style="font-size:12px;">Los campos editables: haz clic para editar</span>
+      </div>
+      <div class="finance-table-wrap table-wrap">
+        <table class="finance-table" id="finance-daily-table">
+          <thead><tr>
+            <th>Fecha</th><th>Ingresos</th><th>CPC</th><th>Visitas</th><th>Pedidos</th>
+            <th>AOV</th><th>Conv%</th><th>COGS</th><th>COGS%</th>
+            <th>Meta Ads</th><th>Ads%</th><th>Com.3%</th><th>Com.6%</th>
+            <th>CF Día</th><th>Profit</th><th>ROAS</th><th>Profit%</th><th></th>
+          </tr></thead>
+          <tbody id="finance-daily-tbody"></tbody>
+          <tfoot><tr class="total-row" id="finance-daily-totals"></tr></tfoot>
+        </table>
+      </div>
+    </div>
+
+    <!-- FIXED COSTS -->
+    <div id="fin-fixed" style="display:none">
+      <div class="form-panel">
+        <h3>Costes Fijos Mensuales</h3>
+        <div class="form-grid" id="fixed-costs-form"></div>
+        <div class="flex mt16 gap8">
+          <button class="btn btn-secondary btn-sm" onclick="addCustomFixedCost()">+ Añadir coste personalizado</button>
+          <button class="btn btn-primary btn-sm" onclick="saveFixedCosts()">Guardar costes</button>
+        </div>
+        <div class="mt16 flex" style="gap:24px;">
+          <div class="card" style="flex:1;">
+            <div class="card-label">Total Mensual</div>
+            <div class="card-value" id="fixed-total-monthly">€0</div>
+          </div>
+          <div class="card" style="flex:1;">
+            <div class="card-label">Coste Fijo Diario</div>
+            <div class="card-value" id="fixed-total-daily">€0</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LIQUIDITY -->
+    <div id="fin-liquidity" style="display:none">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div class="form-panel">
+          <h3 class="text-green">💧 Fondos Líquidos</h3>
+          <div id="liquid-funds"></div>
+          <button class="btn btn-secondary btn-sm mt16" onclick="saveLiquidity()">Guardar</button>
+        </div>
+        <div class="form-panel">
+          <h3 class="text-yellow">🔒 Fondos No Líquidos</h3>
+          <div id="illiquid-funds"></div>
+          <div class="mt16">
+            <div class="form-group mb8">
+              <label>Facturas Pendientes €</label>
+              <input type="number" id="liq-invoices" placeholder="0.00" oninput="calcLiquidity()">
+            </div>
+            <div class="form-group">
+              <label>Deudas Atrasadas €</label>
+              <input type="number" id="liq-debts" placeholder="0.00" oninput="calcLiquidity()">
+            </div>
+          </div>
+          <button class="btn btn-secondary btn-sm mt16" onclick="saveLiquidity()">Guardar</button>
+        </div>
+      </div>
+      <div class="cards-grid mt16">
+        <div class="card"><div class="card-label">Líquido Total</div><div class="card-value text-green" id="liq-total-liquid">€0</div></div>
+        <div class="card"><div class="card-label">No Líquido Total</div><div class="card-value text-yellow" id="liq-total-illiquid">€0</div></div>
+        <div class="card"><div class="card-label">Facturas + Deudas</div><div class="card-value text-red" id="liq-total-debt">€0</div></div>
+        <div class="card"><div class="card-label">Patrimonio Neto</div><div class="card-value" id="liq-net">€0</div></div>
+      </div>
+    </div>
+
+    <!-- MONTHLY SUMMARY -->
+    <div id="fin-monthly" style="display:none">
+      <div class="chart-wrap mb24">
+        <h3>Profit Mensual Histórico</h3>
+        <div class="chart-container"><canvas id="monthlyChart"></canvas></div>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header"><h3>Resumen por Mes</h3></div>
+        <table>
+          <thead><tr><th>Mes</th><th>Ingresos</th><th>COGS</th><th>Meta Ads</th><th>CF</th><th>Profit</th><th>ROAS</th><th>Margen%</th></tr></thead>
+          <tbody id="monthly-summary-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ===== MODALS ===== -->
+
+<!-- Product Modal -->
+<div class="modal-overlay" id="product-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="product-modal-title">Editar Producto</h3>
+      <button class="close-btn" onclick="closeModal('product-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="pm-id">
+      <div class="form-grid">
+        <div class="form-group" style="grid-column:1/-1">
+          <label>Nombre del Producto</label>
+          <input type="text" id="pm-title" placeholder="Nombre">
+        </div>
+        <div class="form-group">
+          <label>Precio de Venta €</label>
+          <input type="number" id="pm-price" placeholder="0.00" step="0.01" oninput="calcProductMargin()">
+        </div>
+        <div class="form-group">
+          <label>Coste Proveedor (COG) €</label>
+          <input type="number" id="pm-cog" placeholder="0.00" step="0.01" oninput="calcProductMargin()">
+        </div>
+        <div class="form-group">
+          <label>Margen € (auto)</label>
+          <input type="text" id="pm-margin-val" readonly style="opacity:.6">
+        </div>
+        <div class="form-group">
+          <label>Margen % (auto)</label>
+          <input type="text" id="pm-margin-pct" readonly style="opacity:.6">
+        </div>
+        <div class="form-group">
+          <label>Categoría</label>
+          <select id="pm-category">
+            <option>Vestidos</option><option>Tops</option><option>Pantalones</option>
+            <option>Accesorios</option><option>Zapatos</option><option>Bolsos</option><option>Otros</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Proveedor</label>
+          <input type="text" id="pm-supplier" placeholder="Nombre del proveedor">
+        </div>
+        <div class="form-group">
+          <label>Estado</label>
+          <select id="pm-status">
+            <option value="activo">Activo</option>
+            <option value="pausado">Pausado</option>
+            <option value="descatalogado">Descatalogado</option>
+          </select>
+        </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label>Notas</label>
+          <textarea id="pm-notes" rows="2" placeholder="Notas adicionales..."></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('product-modal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveProduct()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Creative Modal -->
+<div class="modal-overlay" id="creative-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="creative-modal-title">Nuevo Creativo</h3>
+      <button class="close-btn" onclick="closeModal('creative-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="cm-id">
+      <div class="form-grid">
+        <div class="form-group" style="grid-column:1/-1">
+          <label>Nombre del Creativo</label>
+          <input type="text" id="cm-name" placeholder="ej: Vestido_Negro_V1">
+        </div>
+        <div class="form-group">
+          <label>Producto Vinculado</label>
+          <select id="cm-product"></select>
+        </div>
+        <div class="form-group">
+          <label>Plataforma</label>
+          <select id="cm-platform">
+            <option value="Facebook">Facebook</option>
+            <option value="Instagram">Instagram</option>
+            <option value="Facebook+Instagram">Facebook + Instagram</option>
+            <option value="TikTok">TikTok</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Formato</label>
+          <select id="cm-format">
+            <option value="estático">Estático</option>
+            <option value="vídeo">Vídeo</option>
+            <option value="carrusel">Carrusel</option>
+            <option value="stories">Stories</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Fecha de Lanzamiento</label>
+          <input type="date" id="cm-date">
+        </div>
+        <div class="form-group">
+          <label>URL del Creativo</label>
+          <input type="text" id="cm-url" placeholder="https://...">
+        </div>
+        <div class="form-group">
+          <label>Presupuesto Diario €</label>
+          <input type="number" id="cm-budget" placeholder="0.00" step="0.01">
+        </div>
+        <div class="form-group">
+          <label>Estado</label>
+          <select id="cm-status">
+            <option value="en test">En Test</option>
+            <option value="ganador">Ganador</option>
+            <option value="pausado">Pausado</option>
+          </select>
+        </div>
+      </div>
+      <div class="mt16">
+        <h4 style="font-size:13px;margin-bottom:12px;color:var(--text2);">Seguimiento 7 días</h4>
+        <div style="overflow-x:auto;">
+          <table>
+            <thead><tr><th>Día</th><th>Gasto €</th><th>Ingresos €</th><th>ROAS</th><th>Margen%</th></tr></thead>
+            <tbody id="cm-days-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('creative-modal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveCreative()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Campaign Modal -->
+<div class="modal-overlay" id="campaign-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Nueva Campaña</h3>
+      <button class="close-btn" onclick="closeModal('campaign-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="camp-id">
+      <div class="form-grid">
+        <div class="form-group" style="grid-column:1/-1">
+          <label>Nombre de la Campaña</label>
+          <input type="text" id="camp-name" placeholder="ej: Vestidos_Verano_Retargeting">
+        </div>
+        <div class="form-group">
+          <label>Producto Vinculado</label>
+          <select id="camp-product" onchange="calcBEROAS()"></select>
+        </div>
+        <div class="form-group">
+          <label>Presupuesto Diario €</label>
+          <input type="number" id="camp-budget" placeholder="0.00" step="0.01">
+        </div>
+        <div class="form-group">
+          <label>ROAS Actual</label>
+          <input type="number" id="camp-roas" placeholder="0.00" step="0.01" oninput="calcBEROAS()">
+        </div>
+        <div class="form-group">
+          <label>BEROAS (Break Even)</label>
+          <input type="text" id="camp-beroas" readonly style="opacity:.6">
+        </div>
+        <div class="form-group">
+          <label>Estado</label>
+          <select id="camp-status">
+            <option value="activa">Activa</option>
+            <option value="pausada">Pausada</option>
+            <option value="archivada">Archivada</option>
+          </select>
+        </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label>Notas</label>
+          <textarea id="camp-notes" rows="2" placeholder="Notas sobre la campaña..."></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('campaign-modal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveCampaign()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// STATE & STORAGE
+// ============================================================
+const APP_KEY = 'cc_control_v1';
+
+function loadState() {
+  try { return JSON.parse(localStorage.getItem(APP_KEY)) || defaultState(); }
+  catch(e) { return defaultState(); }
+}
+
+function defaultState() {
+  return {
+    products: [],
+    creatives: [],
+    campaigns: [],
+    returns: [],
+    finance: {
+      daily: {},
+      fixedCosts: {
+        team: 0, apps: 0, chatgpt: 0, creatives: 0, banking: 0, custom: []
+      },
+      liquidity: {
+        wise: 0, bank: 0, shopify: 0, cash: 0,
+        paypal: 0, klarna: 0, stripe: 0,
+        pendingInvoices: 0, debts: 0
+      }
+    },
+    csvData: [],
+    lastSync: null
+  };
+}
+
+function saveState() {
+  localStorage.setItem(APP_KEY, JSON.stringify(state));
+}
+
+let state = loadState();
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+function showModule(name) {
+  document.querySelectorAll('.module').forEach(m => m.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('mod-' + name).classList.add('active');
+  event.currentTarget.classList.add('active');
+  if (name === 'dashboard') renderDashboard();
+  if (name === 'catalog') renderCatalog();
+  if (name === 'testing') renderTesting();
+  if (name === 'scaling') renderScaling();
+  if (name === 'finance') { renderFinanceDaily(); renderFixedCosts(); renderLiquidity(); }
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+function fmt(n, dec=2) {
+  if (n === null || n === undefined || isNaN(n)) return '—';
+  return parseFloat(n).toFixed(dec);
+}
+function fmtEur(n) {
+  if (isNaN(n) || n === null) return '—';
+  return '€' + parseFloat(n).toFixed(2);
+}
+function fmtPct(n) {
+  if (isNaN(n) || n === null) return '—';
+  return parseFloat(n).toFixed(1) + '%';
+}
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+function today() { return new Date().toISOString().slice(0,10); }
+function currentMonth() { return new Date().toISOString().slice(0,7); }
+function daysInMonth(ym) {
+  const [y,m] = ym.split('-').map(Number);
+  return new Date(y, m, 0).getDate();
+}
+
+function roasClass(r) {
+  r = parseFloat(r);
+  if (r >= 2.5) return 'roas-great';
+  if (r >= 2.0) return 'roas-good';
+  if (r >= 1.5) return 'roas-ok';
+  if (r >= 1.0) return 'roas-low';
+  return 'roas-bad';
+}
+function roasBadge(r) {
+  r = parseFloat(r);
+  if (isNaN(r)) return '<span class="badge badge-gray">—</span>';
+  const cls = r>=2.5?'badge-green':r>=2?'badge-green':r>=1.5?'badge-yellow':r>=1?'badge-orange':'badge-red';
+  return `<span class="badge ${cls}">${fmt(r)}</span>`;
+}
+function statusBadge(s) {
+  const map = {activo:'badge-green',pausado:'badge-yellow',descatalogado:'badge-gray','en test':'badge-blue',ganador:'badge-green',activa:'badge-green',pausada:'badge-yellow',archivada:'badge-gray'};
+  return `<span class="badge ${map[s]||'badge-gray'}">${s}</span>`;
+}
+function getProduct(id) { return state.products.find(p=>p.id===id); }
+
+// ============================================================
+// DASHBOARD
+// ============================================================
+let profitChartInst = null, expenseChartInst = null;
+
+function renderDashboard() {
+  const now = new Date();
+  document.getElementById('dash-date').textContent =
+    now.toLocaleDateString('es-ES', {weekday:'long',year:'numeric',month:'long',day:'numeric'});
+
+  const ym = currentMonth();
+  const days = Object.values(state.finance.daily[ym] || {});
+
+  const totalRev = days.reduce((s,d)=>s+(+d.rev||0),0);
+  const totalAds = days.reduce((s,d)=>s+(+d.adSpend||0),0);
+  const totalCogs = days.reduce((s,d)=>s+(+d.cogs||0),0);
+  const totalCF = getDailyFixedCost() * days.length;
+  const totalProfit = days.reduce((s,d)=>s+(calcDayProfit(d)),0);
+  const totalOrders = days.reduce((s,d)=>s+(+d.orders||0),0);
+  const roas = totalAds > 0 ? totalRev / totalAds : 0;
+  const activeProducts = state.products.filter(p=>p.status==='activo').length;
+  const testCreatives = state.creatives.filter(c=>c.status==='en test').length;
+
+  const cards = [
+    {label:'Ingresos del Mes',value:fmtEur(totalRev),sub:totalOrders+' pedidos',cls:'neutral'},
+    {label:'Profit Neto',value:fmtEur(totalProfit),sub:fmtPct(totalRev?totalProfit/totalRev*100:0),cls:totalProfit>=0?'up':'down'},
+    {label:'ROAS Medio',value:fmt(roas),sub:'Ingresos / Ads',cls:roas>=2?'up':roas>=1?'neutral':'down'},
+    {label:'Gasto Meta Ads',value:fmtEur(totalAds),sub:fmtPct(totalRev?totalAds/totalRev*100:0)+' de ingresos',cls:'neutral'},
+    {label:'Productos Activos',value:activeProducts,sub:'de '+state.products.length+' totales',cls:'neutral'},
+    {label:'Creativos en Test',value:testCreatives,sub:state.creatives.filter(c=>c.status==='ganador').length+' ganadores',cls:'neutral'},
+  ];
+  document.getElementById('dash-cards').innerHTML = cards.map(c=>`
+    <div class="card">
+      <div class="card-label">${c.label}</div>
+      <div class="card-value">${c.value}</div>
+      <div class="card-sub ${c.cls}">${c.sub}</div>
+    </div>`).join('');
+
+  // Profit chart
+  const dayLabels = [], profitData = [], revenueData = [];
+  const numDays = daysInMonth(ym);
+  for (let d=1; d<=numDays; d++) {
+    const key = ym+'-'+(d<10?'0':'')+d;
+    const row = (state.finance.daily[ym]||{})[key];
+    dayLabels.push(d);
+    profitData.push(row ? calcDayProfit(row) : null);
+    revenueData.push(row ? (+row.rev||0) : null);
+  }
+  if (profitChartInst) profitChartInst.destroy();
+  const ctx = document.getElementById('profitChart').getContext('2d');
+  profitChartInst = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: dayLabels,
+      datasets: [
+        {label:'Profit €',data:profitData,backgroundColor:profitData.map(v=>v>=0?'rgba(34,197,94,.6)':'rgba(239,68,68,.6)'),borderRadius:4},
+        {label:'Ingresos €',data:revenueData,type:'line',borderColor:'#6366f1',backgroundColor:'rgba(99,102,241,.1)',tension:.3,pointRadius:0,borderWidth:2,fill:true}
+      ]
+    },
+    options: {
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#94a3b8',font:{size:11}}}},
+      scales:{
+        x:{ticks:{color:'#94a3b8'},grid:{color:'rgba(255,255,255,.05)'}},
+        y:{ticks:{color:'#94a3b8'},grid:{color:'rgba(255,255,255,.05)'}}
+      }
+    }
+  });
+
+  // Expense donut
+  const expData = [totalAds, totalCogs, totalCF, Math.max(0,totalProfit)];
+  if (expenseChartInst) expenseChartInst.destroy();
+  const ctx2 = document.getElementById('expenseChart').getContext('2d');
+  expenseChartInst = new Chart(ctx2, {
+    type: 'doughnut',
+    data: {
+      labels: ['Meta Ads','COGS','Costes Fijos','Profit'],
+      datasets: [{data:expData,backgroundColor:['#6366f1','#f97316','#eab308','#22c55e'],borderWidth:0}]
+    },
+    options: {
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{color:'#94a3b8',font:{size:11},padding:10}}}
+    }
+  });
+
+  // Products table
+  const sorted = [...state.products]
+    .filter(p=>p.status==='activo')
+    .map(p=>({...p,marginVal:(+p.price||0)-(+p.cog||0),marginPct:p.price>0?((+p.price-(+p.cog||0))/(+p.price))*100:0}))
+    .sort((a,b)=>b.marginVal-a.marginVal)
+    .slice(0,8);
+  const ptbody = document.getElementById('dash-products-table');
+  ptbody.innerHTML = sorted.length ? sorted.map(p=>`
+    <tr>
+      <td>${p.title}</td>
+      <td>${fmtEur(p.price)}</td>
+      <td>${fmtEur(p.cog)}</td>
+      <td class="${p.marginVal>=0?'text-green':'text-red'}">${fmtEur(p.marginVal)}</td>
+      <td class="${p.marginPct>=30?'text-green':p.marginPct>=15?'text-yellow':'text-red'}">${fmtPct(p.marginPct)}</td>
+      <td>${statusBadge(p.status)}</td>
+    </tr>`).join('') :
+    '<tr><td colspan="6" class="text-muted" style="text-align:center;padding:24px;">Sin productos activos</td></tr>';
+
+  // Creatives table
+  const ctbody = document.getElementById('dash-creatives-table');
+  const actCreatives = state.creatives.filter(c=>c.status==='en test').slice(0,6);
+  ctbody.innerHTML = actCreatives.length ? actCreatives.map(c=>{
+    const roas = calcCreativeROAS(c);
+    const p = getProduct(c.productId);
+    const spend = calcCreativeSpend(c);
+    return `<tr>
+      <td>${c.name}</td>
+      <td>${p?p.title:'—'}</td>
+      <td>${c.platform||'—'}</td>
+      <td>${roasBadge(roas)}</td>
+      <td>${fmtEur(spend)}</td>
+      <td>${statusBadge(c.status)}</td>
+    </tr>`;
+  }).join('') :
+    '<tr><td colspan="6" class="text-muted" style="text-align:center;padding:24px;">Sin creativos en test</td></tr>';
+}
+
+// ============================================================
+// CATALOG
+// ============================================================
+function renderCatalog() {
+  const search = (document.getElementById('cat-search').value||'').toLowerCase();
+  const filterCat = document.getElementById('cat-filter-cat').value;
+  const filterStatus = document.getElementById('cat-filter-status').value;
+  let products = state.products.filter(p => {
+    const matchSearch = !search || p.title.toLowerCase().includes(search);
+    const matchCat = !filterCat || p.category === filterCat;
+    const matchStatus = !filterStatus || p.status === filterStatus;
+    return matchSearch && matchCat && matchStatus;
+  });
+  const grid = document.getElementById('catalog-grid');
+  if (!products.length) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+      <div class="empty-icon">👗</div>
+      <p>No hay productos. Usa "Importar desde Shopify" para comenzar.</p></div>`;
+    return;
+  }
+  grid.innerHTML = products.map(p => {
+    const margin = (+p.price||0) - (+p.cog||0);
+    const marginPct = p.price>0 ? margin/p.price*100 : 0;
+    const img = (p.images&&p.images[0]) ? p.images[0] : '';
+    return `<div class="product-card" onclick="editProduct('${p.id}')">
+      ${img ? `<img src="${img}" alt="${p.title}" loading="lazy" onerror="this.style.display='none'">` :
+        `<div style="height:180px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:40px;">👗</div>`}
+      <div class="product-card-body">
+        <h4>${p.title}</h4>
+        <div class="card-meta-row" style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
+          <span style="font-weight:700;color:var(--accent2)">${fmtEur(p.price)}</span>
+          ${statusBadge(p.status||'activo')}
+        </div>
+        <div style="font-size:12px;color:var(--text2);margin-top:4px;">
+          COG: ${fmtEur(p.cog)} · Margen: <span class="${marginPct>=30?'text-green':marginPct>=15?'text-yellow':'text-red'}">${fmtPct(marginPct)}</span>
+        </div>
+        ${p.category?`<div style="font-size:11px;color:var(--text2);margin-top:2px;">${p.category}${p.supplier?' · '+p.supplier:''}</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function importShopify() {
+  const btn = event.currentTarget;
+  btn.disabled = true;
+  btn.textContent = '⏳ Importando...';
+  try {
+    const res = await fetch('https://catalinacastellanos.com/products.json?limit=250');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    const products = data.products || [];
+    let added = 0, updated = 0;
+    products.forEach(sp => {
+      const existing = state.products.find(p => p.handle === sp.handle);
+      const variant = sp.variants && sp.variants[0];
+      const price = variant ? parseFloat(variant.price) : 0;
+      const images = sp.images ? sp.images.map(i=>i.src) : [];
+      if (existing) {
+        existing.title = sp.title;
+        existing.price = price;
+        existing.images = images;
+        existing.shopifyId = sp.id;
+        existing.url = 'https://catalinacastellanos.com/products/' + sp.handle;
+        existing.variants = sp.variants;
+        updated++;
+      } else {
+        state.products.push({
+          id: uid(), shopifyId: sp.id, handle: sp.handle,
+          title: sp.title, description: sp.body_html||'',
+          price, images, variants: sp.variants||[],
+          url: 'https://catalinacastellanos.com/products/'+sp.handle,
+          cog: 0, category: 'Otros', supplier: '', status: 'activo', notes: ''
+        });
+        added++;
+      }
+    });
+    state.lastSync = new Date().toISOString();
+    saveState();
+    renderCatalog();
+    alert(`✅ Importación completa:\n${added} nuevos productos\n${updated} actualizados`);
+  } catch(e) {
+    alert('Error al importar: ' + e.message + '\nRevisa la consola para más detalles.');
+    console.error(e);
+  }
+  btn.disabled = false;
+  btn.textContent = '🛍 Importar desde Shopify';
+}
+
+function syncProducts() { importShopify(); }
+
+function editProduct(id) {
+  const p = getProduct(id) || {};
+  document.getElementById('product-modal-title').textContent = id ? 'Editar Producto' : 'Nuevo Producto';
+  document.getElementById('pm-id').value = p.id || '';
+  document.getElementById('pm-title').value = p.title || '';
+  document.getElementById('pm-price').value = p.price || '';
+  document.getElementById('pm-cog').value = p.cog || '';
+  document.getElementById('pm-category').value = p.category || 'Otros';
+  document.getElementById('pm-supplier').value = p.supplier || '';
+  document.getElementById('pm-status').value = p.status || 'activo';
+  document.getElementById('pm-notes').value = p.notes || '';
+  calcProductMargin();
+  document.getElementById('product-modal').classList.add('open');
+}
+
+function calcProductMargin() {
+  const price = parseFloat(document.getElementById('pm-price').value)||0;
+  const cog = parseFloat(document.getElementById('pm-cog').value)||0;
+  const margin = price - cog;
+  const pct = price > 0 ? margin/price*100 : 0;
+  document.getElementById('pm-margin-val').value = fmtEur(margin);
+  document.getElementById('pm-margin-pct').value = fmtPct(pct);
+}
+
+function saveProduct() {
+  const id = document.getElementById('pm-id').value;
+  const existing = id ? state.products.find(p=>p.id===id) : null;
+  const data = {
+    title: document.getElementById('pm-title').value,
+    price: parseFloat(document.getElementById('pm-price').value)||0,
+    cog: parseFloat(document.getElementById('pm-cog').value)||0,
+    category: document.getElementById('pm-category').value,
+    supplier: document.getElementById('pm-supplier').value,
+    status: document.getElementById('pm-status').value,
+    notes: document.getElementById('pm-notes').value
+  };
+  if (existing) { Object.assign(existing, data); }
+  else { state.products.push({id:uid(), images:[], variants:[], ...data}); }
+  saveState();
+  closeModal('product-modal');
+  renderCatalog();
+}
+
+// ============================================================
+// TESTING
+// ============================================================
+function renderTesting() {
+  const search = (document.getElementById('test-search').value||'').toLowerCase();
+  const filterStatus = document.getElementById('test-filter-status').value;
+  const filterProduct = document.getElementById('test-filter-product').value;
+
+  // Update product filter dropdown
+  const sel = document.getElementById('test-filter-product');
+  const selVal = sel.value;
+  sel.innerHTML = '<option value="">Todos los productos</option>' +
+    state.products.map(p=>`<option value="${p.id}" ${p.id===selVal?'selected':''}>${p.title}</option>`).join('');
+
+  let creatives = state.creatives.filter(c => {
+    const matchSearch = !search || c.name.toLowerCase().includes(search);
+    const matchStatus = !filterStatus || c.status === filterStatus;
+    const matchProd = !filterProduct || c.productId === filterProduct;
+    return matchSearch && matchStatus && matchProd;
+  });
+
+  const container = document.getElementById('testing-list');
+  if (!creatives.length) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">🧪</div><p>No hay creativos. Crea uno con "+ Nuevo Creativo".</p></div>`;
+    return;
+  }
+
+  container.innerHTML = creatives.map(c => {
+    const prod = getProduct(c.productId);
+    const totalRoas = calcCreativeROAS(c);
+    const totalSpend = calcCreativeSpend(c);
+    const totalRev = calcCreativeRevenue(c);
+    const totalMargin = calcCreativeMargin(c);
+    const units = calcCreativeUnits(c);
+    const price = prod ? (+prod.price||0) : 0;
+    const cog = prod ? (+prod.cog||0) : 0;
+    const marginEur = price - cog;
+    const marginPct = price > 0 ? marginEur/price*100 : 0;
+    const totalCOG = units * cog;
+    const storeValue = units * price;
+    const roasClass2 = roasClass(totalRoas);
+
+    const daysHtml = (c.days||[]).map((d,i) => {
+      const roas = d.spend > 0 ? d.revenue/d.spend : 0;
+      const mp = price > 0 ? ((d.revenue - d.spend - (calcUnitsFromRev(d.revenue,price)*cog)) / d.revenue * 100) : 0;
+      return `<td class="${roasClass(roas)}">${fmt(roas)}</td><td class="${mp>=0?'text-green':'text-red'}">${fmtPct(mp)}</td>`;
+    }).join('');
+    const emptyDays = Array(Math.max(0,7-(c.days||[]).length)).fill(0).map(()=>'<td class="text-muted">—</td><td class="text-muted">—</td>').join('');
+
+    return `<div class="table-wrap mb24">
+      <div class="table-header flex-between">
+        <div class="flex">
+          <span class="semaphore ${totalRoas>=2?'sem-green':totalRoas>=1?'sem-yellow':'sem-red'}"></span>
+          <h3>${c.name}</h3>
+          <span class="badge badge-gray" style="margin-left:4px;">${c.platform||''}</span>
+          <span class="badge badge-gray">${c.format||''}</span>
+          ${statusBadge(c.status)}
+        </div>
+        <div class="flex">
+          <button class="btn btn-secondary btn-sm" onclick="openCreativeModal('${c.id}')">✏️ Editar</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteCreative('${c.id}')">🗑</button>
+        </div>
+      </div>
+      <div style="padding:12px 16px;background:var(--bg3);display:flex;flex-wrap:wrap;gap:24px;font-size:13px;">
+        <span>Producto: <b>${prod?prod.title:'—'}</b></span>
+        <span>Precio: <b>${fmtEur(price)}</b></span>
+        <span>COG: <b>${fmtEur(cog)}</b></span>
+        <span>Margen€: <b class="${marginEur>=0?'text-green':'text-red'}">${fmtEur(marginEur)}</b></span>
+        <span>Margen%: <b>${fmtPct(marginPct)}</b></span>
+        <span>Unidades: <b>${units}</b></span>
+        <span>COG Total: <b>${fmtEur(totalCOG)}</b></span>
+        <span>Store Value: <b>${fmtEur(storeValue)}</b></span>
+        <span>ROAS Total: <b class="${roasClass2}">${fmt(totalRoas)}</b></span>
+        <span>Gasto Total: <b>${fmtEur(totalSpend)}</b></span>
+      </div>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead><tr>
+            <th colspan="2">Día 1</th><th colspan="2">Día 2</th><th colspan="2">Día 3</th>
+            <th colspan="2">Día 4</th><th colspan="2">Día 5</th><th colspan="2">Día 6</th>
+            <th colspan="2">Día 7</th>
+          </tr>
+          <tr>${Array(7).fill(0).map((_,i)=>`<th>ROAS${i+1}</th><th>M%${i+1}</th>`).join('')}</tr>
+          </thead>
+          <tbody><tr>${daysHtml}${emptyDays}</tr></tbody>
+        </table>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function calcCreativeROAS(c) {
+  const totalSpend = calcCreativeSpend(c);
+  const totalRev = calcCreativeRevenue(c);
+  return totalSpend > 0 ? totalRev/totalSpend : 0;
+}
+function calcCreativeSpend(c) { return (c.days||[]).reduce((s,d)=>s+(+d.spend||0),0); }
+function calcCreativeRevenue(c) { return (c.days||[]).reduce((s,d)=>s+(+d.revenue||0),0); }
+function calcUnitsFromRev(rev, price) { return price > 0 ? Math.round(rev/price) : 0; }
+function calcCreativeUnits(c) {
+  const prod = getProduct(c.productId);
+  const price = prod ? (+prod.price||0) : 0;
+  return calcUnitsFromRev(calcCreativeRevenue(c), price);
+}
+function calcCreativeMargin(c) {
+  const prod = getProduct(c.productId);
+  if (!prod) return 0;
+  const rev = calcCreativeRevenue(c);
+  const spend = calcCreativeSpend(c);
+  const units = calcUnitsFromRev(rev, +prod.price||0);
+  return rev - spend - units*(+prod.cog||0);
+}
+
+function openCreativeModal(id) {
+  const c = id ? state.creatives.find(x=>x.id===id) : null;
+  document.getElementById('creative-modal-title').textContent = c ? 'Editar Creativo' : 'Nuevo Creativo';
+  document.getElementById('cm-id').value = c ? c.id : '';
+  document.getElementById('cm-name').value = c ? c.name : '';
+  document.getElementById('cm-platform').value = c ? c.platform : 'Facebook';
+  document.getElementById('cm-format').value = c ? c.format : 'estático';
+  document.getElementById('cm-date').value = c ? c.date : today();
+  document.getElementById('cm-url').value = c ? c.url||'' : '';
+  document.getElementById('cm-budget').value = c ? c.budget||'' : '';
+  document.getElementById('cm-status').value = c ? c.status : 'en test';
+
+  const prodSel = document.getElementById('cm-product');
+  prodSel.innerHTML = '<option value="">Sin producto</option>' +
+    state.products.map(p=>`<option value="${p.id}" ${c&&c.productId===p.id?'selected':''}>${p.title}</option>`).join('');
+
+  // Days table
+  const tbody = document.getElementById('cm-days-table');
+  const days = c ? (c.days||[]) : [];
+  tbody.innerHTML = Array(7).fill(0).map((_,i) => {
+    const d = days[i] || {spend:'',revenue:''};
+    return `<tr>
+      <td style="font-weight:600;color:var(--text2);">Día ${i+1}</td>
+      <td><input type="number" class="day-spend" placeholder="0.00" step="0.01" value="${d.spend||''}" oninput="updateDayRoas(${i})"></td>
+      <td><input type="number" class="day-revenue" placeholder="0.00" step="0.01" value="${d.revenue||''}" oninput="updateDayRoas(${i})"></td>
+      <td id="day-roas-${i}" class="text-muted">—</td>
+      <td id="day-margin-${i}" class="text-muted">—</td>
+    </tr>`;
+  }).join('');
+  for(let i=0;i<7;i++) updateDayRoas(i);
+  document.getElementById('creative-modal').classList.add('open');
+}
+
+function updateDayRoas(i) {
+  const rows = document.querySelectorAll('#cm-days-table tr');
+  const row = rows[i];
+  if (!row) return;
+  const spend = parseFloat(row.querySelectorAll('input')[0].value)||0;
+  const rev = parseFloat(row.querySelectorAll('input')[1].value)||0;
+  const roas = spend > 0 ? rev/spend : 0;
+  const prodId = document.getElementById('cm-product').value;
+  const prod = getProduct(prodId);
+  const price = prod ? (+prod.price||0) : 0;
+  const cog = prod ? (+prod.cog||0) : 0;
+  const units = calcUnitsFromRev(rev, price);
+  const mp = rev > 0 ? (rev - spend - units*cog)/rev*100 : 0;
+  const roasEl = document.getElementById('day-roas-'+i);
+  const mpEl = document.getElementById('day-margin-'+i);
+  if (roasEl) { roasEl.className = roasClass(roas); roasEl.textContent = spend>0?fmt(roas):'—'; }
+  if (mpEl) { mpEl.className = mp>=0?'text-green':'text-red'; mpEl.textContent = rev>0?fmtPct(mp):'—'; }
+}
+
+function saveCreative() {
+  const id = document.getElementById('cm-id').value;
+  const rows = document.querySelectorAll('#cm-days-table tr');
+  const days = Array.from(rows).map(row => {
+    const inputs = row.querySelectorAll('input');
+    return { spend: parseFloat(inputs[0].value)||0, revenue: parseFloat(inputs[1].value)||0 };
+  }).filter(d=>d.spend>0||d.revenue>0);
+
+  const data = {
+    name: document.getElementById('cm-name').value,
+    productId: document.getElementById('cm-product').value,
+    platform: document.getElementById('cm-platform').value,
+    format: document.getElementById('cm-format').value,
+    date: document.getElementById('cm-date').value,
+    url: document.getElementById('cm-url').value,
+    budget: parseFloat(document.getElementById('cm-budget').value)||0,
+    status: document.getElementById('cm-status').value,
+    days
+  };
+
+  if (id) { const c = state.creatives.find(x=>x.id===id); if(c) Object.assign(c,data); }
+  else { state.creatives.push({id:uid(),...data}); }
+  saveState();
+  closeModal('creative-modal');
+  renderTesting();
+}
+
+function deleteCreative(id) {
+  if (!confirm('¿Eliminar este creativo?')) return;
+  state.creatives = state.creatives.filter(c=>c.id!==id);
+  saveState(); renderTesting();
+}
+
+// ============================================================
+// SCALING
+// ============================================================
+function renderScaling() {
+  const container = document.getElementById('campaigns-list');
+  if (!state.campaigns.length) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">🚀</div><p>No hay campañas. Importa un CSV de Meta Ads o crea una campaña manualmente.</p></div>`;
+    return;
+  }
+  container.innerHTML = state.campaigns.map(c => {
+    const prod = getProduct(c.productId);
+    const beroas = calcBEROASValue(c.productId);
+    const roas = +c.roas||0;
+    const semCls = roas >= beroas ? 'sem-green' : roas >= beroas*0.8 ? 'sem-yellow' : 'sem-red';
+    const totalReturns = (state.returns||[]).filter(r=>r.campaignId===c.id).reduce((s,r)=>s+(+r.amount||0),0);
+    const adjProfit = calcCampaignProfit(c) - totalReturns;
+    return `<div class="table-wrap mb16">
+      <div class="table-header flex-between">
+        <div class="flex">
+          <span class="semaphore ${semCls}"></span>
+          <h3>${c.name}</h3>
+          ${statusBadge(c.status||'activa')}
+        </div>
+        <div class="flex">
+          <button class="btn btn-secondary btn-sm" onclick="openCampaignModal('${c.id}')">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteCampaign('${c.id}')">🗑</button>
+        </div>
+      </div>
+      <div style="padding:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;">
+        <div><div class="card-label">Producto</div><div style="font-weight:600;">${prod?prod.title:'—'}</div></div>
+        <div><div class="card-label">Presupuesto/día</div><div style="font-weight:600;">${fmtEur(c.budget)}</div></div>
+        <div><div class="card-label">ROAS Actual</div><div class="${roasClass(roas)}">${fmt(roas)}</div></div>
+        <div><div class="card-label">BEROAS</div><div style="font-weight:600;">${fmt(beroas)}</div></div>
+        <div><div class="card-label">Devoluciones</div><div class="text-red">${fmtEur(totalReturns)}</div></div>
+        <div><div class="card-label">Profit Ajustado</div><div class="${adjProfit>=0?'text-green':'text-red'}">${fmtEur(adjProfit)}</div></div>
+      </div>
+      ${c.notes?`<div style="padding:0 16px 12px;font-size:12px;color:var(--text2);">📝 ${c.notes}</div>`:''}
+    </div>`;
+  }).join('');
+
+  // Returns list
+  const retList = document.getElementById('returns-list');
+  const returns = state.returns||[];
+  retList.innerHTML = returns.length ? `<table><thead><tr><th>Fecha</th><th>Descripción</th><th>Importe</th><th></th></tr></thead>
+    <tbody>${returns.map((r,i)=>`<tr>
+      <td>${r.date}</td><td>${r.desc}</td>
+      <td class="text-red">${fmtEur(r.amount)}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteReturn(${i})">✕</button></td>
+    </tr>`).join('')}</tbody></table>` : '<p class="text-muted" style="font-size:12px;">Sin devoluciones registradas</p>';
+}
+
+function calcBEROASValue(productId) {
+  const prod = getProduct(productId);
+  if (!prod || !prod.price) return 0;
+  const cog = +prod.cog||0;
+  const price = +prod.price;
+  const marginPct = (price - cog) / price;
+  return marginPct > 0 ? 1/marginPct : 0;
+}
+
+function calcCampaignProfit(c) {
+  const prod = getProduct(c.productId);
+  if (!prod) return 0;
+  const budget = +c.budget||0;
+  const roas = +c.roas||0;
+  const rev = budget * roas;
+  const units = calcUnitsFromRev(rev, +prod.price||0);
+  return rev - budget - units*(+prod.cog||0);
+}
+
+function openCampaignModal(id) {
+  const c = id ? state.campaigns.find(x=>x.id===id) : null;
+  document.getElementById('camp-id').value = c ? c.id : '';
+  document.getElementById('camp-name').value = c ? c.name : '';
+  document.getElementById('camp-budget').value = c ? c.budget||'' : '';
+  document.getElementById('camp-roas').value = c ? c.roas||'' : '';
+  document.getElementById('camp-status').value = c ? c.status : 'activa';
+  document.getElementById('camp-notes').value = c ? c.notes||'' : '';
+
+  const sel = document.getElementById('camp-product');
+  sel.innerHTML = '<option value="">Sin producto</option>' +
+    state.products.map(p=>`<option value="${p.id}" ${c&&c.productId===p.id?'selected':''}>${p.title}</option>`).join('');
+
+  calcBEROAS();
+  document.getElementById('campaign-modal').classList.add('open');
+}
+
+function calcBEROAS() {
+  const prodId = document.getElementById('camp-product').value;
+  const beroas = calcBEROASValue(prodId);
+  document.getElementById('camp-beroas').value = beroas > 0 ? fmt(beroas) : '—';
+}
+
+function saveCampaign() {
+  const id = document.getElementById('camp-id').value;
+  const data = {
+    name: document.getElementById('camp-name').value,
+    productId: document.getElementById('camp-product').value,
+    budget: parseFloat(document.getElementById('camp-budget').value)||0,
+    roas: parseFloat(document.getElementById('camp-roas').value)||0,
+    status: document.getElementById('camp-status').value,
+    notes: document.getElementById('camp-notes').value
+  };
+  if (id) { const c = state.campaigns.find(x=>x.id===id); if(c) Object.assign(c,data); }
+  else { state.campaigns.push({id:uid(),...data}); }
+  saveState(); closeModal('campaign-modal'); renderScaling();
+}
+
+function deleteCampaign(id) {
+  if (!confirm('¿Eliminar campaña?')) return;
+  state.campaigns = state.campaigns.filter(c=>c.id!==id);
+  saveState(); renderScaling();
+}
+
+function addReturn() {
+  const date = document.getElementById('ret-date').value;
+  const desc = document.getElementById('ret-desc').value;
+  const amount = parseFloat(document.getElementById('ret-amount').value)||0;
+  if (!date || !amount) { alert('Completa fecha e importe'); return; }
+  if (!state.returns) state.returns = [];
+  state.returns.push({date,desc,amount});
+  saveState();
+  document.getElementById('ret-date').value = '';
+  document.getElementById('ret-desc').value = '';
+  document.getElementById('ret-amount').value = '';
+  renderScaling();
+}
+
+function deleteReturn(i) {
+  state.returns.splice(i,1);
+  saveState(); renderScaling();
+}
+
+// CSV Import
+function setupDragDrop() {
+  const zone = document.getElementById('csv-drop-zone');
+  if (!zone) return;
+  zone.addEventListener('dragover', e=>{e.preventDefault();zone.classList.add('drag-over');});
+  zone.addEventListener('dragleave', ()=>zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', e=>{
+    e.preventDefault(); zone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) handleCSVFile(file);
+  });
+}
+
+function handleCSVFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => parseCSV(e.target.result);
+  reader.readAsText(file, 'UTF-8');
+}
+
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  if (lines.length < 2) { alert('CSV vacío o inválido'); return; }
+  const sep = lines[0].includes(';') ? ';' : ',';
+  const headers = lines[0].split(sep).map(h=>h.trim().replace(/"/g,''));
+  const rows = lines.slice(1).map(l => {
+    const vals = l.split(sep).map(v=>v.trim().replace(/"/g,''));
+    const obj = {};
+    headers.forEach((h,i) => obj[h] = vals[i]||'');
+    return obj;
+  }).filter(r=>Object.values(r).some(v=>v));
+
+  state.csvData = rows;
+  saveState();
+
+  // Render CSV table
+  const table = document.getElementById('csv-table');
+  table.innerHTML = `<thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+    <tbody>${rows.slice(0,20).map(r=>`<tr>${headers.map(h=>`<td>${r[h]||''}</td>`).join('')}</tr>`).join('')}
+    ${rows.length>20?`<tr><td colspan="${headers.length}" class="text-muted">... y ${rows.length-20} filas más</td></tr>`:''}</tbody>`;
+  document.getElementById('csv-preview').style.display = 'block';
+}
+
+function applyCSVToFinance() {
+  if (!state.csvData.length) return;
+  // Auto-detect spend column
+  const spendCols = ['Importe gastado','Amount spent','Spend','Cost','Gasto'];
+  const dateCol = ['Día','Date','Fecha','Day','Reporting starts'];
+  const ym = document.getElementById('fin-month-select').value || currentMonth();
+
+  state.csvData.forEach(row => {
+    let date = null;
+    for (const dc of dateCol) { if (row[dc]) { date = row[dc]; break; } }
+    if (!date) return;
+    // normalize date
+    const d = new Date(date);
+    if (isNaN(d)) return;
+    const key = d.toISOString().slice(0,10);
+    const rowYm = key.slice(0,7);
+
+    let spend = 0;
+    for (const sc of spendCols) {
+      if (row[sc] !== undefined) {
+        spend = parseFloat(row[sc].replace(',','.').replace(/[^0-9.]/g,''))||0;
+        break;
+      }
+    }
+    if (!state.finance.daily[rowYm]) state.finance.daily[rowYm] = {};
+    if (!state.finance.daily[rowYm][key]) state.finance.daily[rowYm][key] = {date:key};
+    state.finance.daily[rowYm][key].adSpend = (state.finance.daily[rowYm][key].adSpend||0) + spend;
+  });
+  saveState();
+  alert('✅ Datos de Meta Ads aplicados a Finanzas');
+  showModule('finance');
+}
+
+// ============================================================
+// FINANCE
+// ============================================================
+function financeTab(tab) {
+  ['daily','fixed','liquidity','monthly'].forEach(t => {
+    document.getElementById('fin-'+t).style.display = t===tab?'block':'none';
+    document.querySelectorAll('.tabs .tab').forEach((el,i) => {
+      const tabs2 = ['daily','fixed','liquidity','monthly'];
+      el.classList.toggle('active', tabs2[i]===tab);
+    });
+  });
+  if (tab==='monthly') renderMonthlySummary();
+}
+
+function getDailyFixedCost() {
+  const fc = state.finance.fixedCosts||{};
+  const base = ['team','apps','chatgpt','creatives','banking'].reduce((s,k)=>s+(+fc[k]||0),0);
+  const custom = (fc.custom||[]).reduce((s,c)=>s+(+c.amount||0),0);
+  return (base + custom) / 30;
+}
+
+function calcDayProfit(d) {
+  const rev = +d.rev||0;
+  const cogs = +d.cogs||0;
+  const ads = +d.adSpend||0;
+  const com3 = rev * 0.03;
+  const com6 = rev * 0.06;
+  const cf = getDailyFixedCost();
+  return rev - cogs - ads - com3 - cf;
+}
+
+function addFinanceDay() {
+  const ym = document.getElementById('fin-month-select').value || currentMonth();
+  const dateStr = prompt('Fecha (YYYY-MM-DD):', today());
+  if (!dateStr) return;
+  if (!state.finance.daily[ym]) state.finance.daily[ym] = {};
+  if (!state.finance.daily[ym][dateStr]) {
+    state.finance.daily[ym][dateStr] = {date:dateStr,rev:0,cpc:0,visits:0,orders:0,adSpend:0,cogs:0};
+  }
+  saveState(); renderFinanceDaily();
+}
+
+function renderFinanceDaily() {
+  const ym = document.getElementById('fin-month-select').value || currentMonth();
+  const days = state.finance.daily[ym] || {};
+  const sorted = Object.values(days).sort((a,b)=>a.date.localeCompare(b.date));
+  const cf = getDailyFixedCost();
+
+  const cols = ['rev','cpc','visits','orders','adSpend','cogs'];
+  const tbody = document.getElementById('finance-daily-tbody');
+  tbody.innerHTML = sorted.map(d => {
+    const rev = +d.rev||0;
+    const cogs = +d.cogs||0;
+    const ads = +d.adSpend||0;
+    const orders = +d.orders||0;
+    const visits = +d.visits||0;
+    const aov = orders > 0 ? rev/orders : 0;
+    const cr = visits > 0 ? orders/visits*100 : 0;
+    const cogsPct = rev > 0 ? cogs/rev*100 : 0;
+    const adsPct = rev > 0 ? ads/rev*100 : 0;
+    const com3 = rev*0.03;
+    const com6 = rev*0.06;
+    const profit = rev - cogs - ads - com3 - cf;
+    const profitPct = rev > 0 ? profit/rev*100 : 0;
+    const roas = ads > 0 ? rev/ads : 0;
+
+    return `<tr>
+      <td>${d.date.slice(5)}</td>
+      <td><input type="number" value="${d.rev||''}" placeholder="0" onchange="updateDay('${ym}','${d.date}','rev',this.value)" style="width:80px;"></td>
+      <td><input type="number" value="${d.cpc||''}" placeholder="0" onchange="updateDay('${ym}','${d.date}','cpc',this.value)" style="width:60px;"></td>
+      <td><input type="number" value="${d.visits||''}" placeholder="0" onchange="updateDay('${ym}','${d.date}','visits',this.value)" style="width:70px;"></td>
+      <td><input type="number" value="${d.orders||''}" placeholder="0" onchange="updateDay('${ym}','${d.date}','orders',this.value)" style="width:60px;"></td>
+      <td>${fmtEur(aov)}</td>
+      <td class="${cr>=2?'text-green':cr>=1?'text-yellow':'text-red'}">${fmtPct(cr)}</td>
+      <td><input type="number" value="${d.cogs||''}" placeholder="0" onchange="updateDay('${ym}','${d.date}','cogs',this.value)" style="width:80px;"></td>
+      <td class="${cogsPct<=40?'text-green':cogsPct<=60?'text-yellow':'text-red'}">${fmtPct(cogsPct)}</td>
+      <td><input type="number" value="${d.adSpend||''}" placeholder="0" onchange="updateDay('${ym}','${d.date}','adSpend',this.value)" style="width:80px;"></td>
+      <td class="${adsPct<=30?'text-green':adsPct<=50?'text-yellow':'text-red'}">${fmtPct(adsPct)}</td>
+      <td>${fmtEur(com3)}</td>
+      <td>${fmtEur(com6)}</td>
+      <td>${fmtEur(cf)}</td>
+      <td class="${profit>=0?'text-green':'text-red'}" style="font-weight:700;">${fmtEur(profit)}</td>
+      <td class="${roasClass(roas)}">${roas>0?fmt(roas):'—'}</td>
+      <td class="${profitPct>=10?'text-green':profitPct>=0?'text-yellow':'text-red'}">${rev>0?fmtPct(profitPct):'—'}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteDay('${ym}','${d.date}')">✕</button></td>
+    </tr>`;
+  }).join('');
+
+  // Totals row
+  const totRev = sorted.reduce((s,d)=>s+(+d.rev||0),0);
+  const totAds = sorted.reduce((s,d)=>s+(+d.adSpend||0),0);
+  const totCogs = sorted.reduce((s,d)=>s+(+d.cogs||0),0);
+  const totOrders = sorted.reduce((s,d)=>s+(+d.orders||0),0);
+  const totCF = cf * sorted.length;
+  const totCom3 = totRev * 0.03;
+  const totProfit = totRev - totCogs - totAds - totCom3 - totCF;
+  const totRoas = totAds > 0 ? totRev/totAds : 0;
+  const totProfitPct = totRev > 0 ? totProfit/totRev*100 : 0;
+  const tfooter = document.getElementById('finance-daily-totals');
+  tfooter.innerHTML = `<td>TOTAL</td><td>${fmtEur(totRev)}</td><td>—</td><td>—</td><td>${totOrders}</td>
+    <td>—</td><td>—</td><td>${fmtEur(totCogs)}</td><td>${fmtPct(totRev?totCogs/totRev*100:0)}</td>
+    <td>${fmtEur(totAds)}</td><td>${fmtPct(totRev?totAds/totRev*100:0)}</td>
+    <td>${fmtEur(totCom3)}</td><td>${fmtEur(totRev*0.06)}</td><td>${fmtEur(totCF)}</td>
+    <td class="${totProfit>=0?'text-green':'text-red'}">${fmtEur(totProfit)}</td>
+    <td class="${roasClass(totRoas)}">${totRoas>0?fmt(totRoas):'—'}</td>
+    <td class="${totProfitPct>=10?'text-green':totProfitPct>=0?'text-yellow':'text-red'}">${totRev>0?fmtPct(totProfitPct):'—'}</td>
+    <td></td>`;
+}
+
+function updateDay(ym, date, field, value) {
+  if (!state.finance.daily[ym]) state.finance.daily[ym] = {};
+  if (!state.finance.daily[ym][date]) state.finance.daily[ym][date] = {date};
+  state.finance.daily[ym][date][field] = parseFloat(value)||0;
+  saveState();
+  renderFinanceDaily();
+}
+
+function deleteDay(ym, date) {
+  if (!confirm('¿Eliminar este día?')) return;
+  delete state.finance.daily[ym][date];
+  saveState(); renderFinanceDaily();
+}
+
+function renderFixedCosts() {
+  const fc = state.finance.fixedCosts||{};
+  const defaults = [
+    {key:'team',label:'Team / Empleados'},
+    {key:'apps',label:'Apps / Software'},
+    {key:'chatgpt',label:'ChatGPT / IA'},
+    {key:'creatives',label:'Creativos / Diseño'},
+    {key:'banking',label:'Banking / Comisiones'}
+  ];
+  const form = document.getElementById('fixed-costs-form');
+  form.innerHTML = defaults.map(f=>`
+    <div class="form-group">
+      <label>${f.label} €/mes</label>
+      <input type="number" id="fc-${f.key}" value="${fc[f.key]||''}" placeholder="0.00" step="0.01" oninput="updateFixedTotal()">
+    </div>`).join('') +
+    (fc.custom||[]).map((c,i)=>`
+    <div class="form-group">
+      <label><input type="text" value="${c.name}" onchange="updateCustomName(${i},this.value)" style="font-size:12px;padding:4px;"> €/mes</label>
+      <div class="flex"><input type="number" id="fc-custom-${i}" value="${c.amount||''}" placeholder="0.00" step="0.01" oninput="updateFixedTotal()">
+      <button class="btn btn-danger btn-sm" onclick="removeCustomCost(${i})">✕</button></div>
+    </div>`).join('');
+  updateFixedTotal();
+}
+
+function updateFixedTotal() {
+  const defaults = ['team','apps','chatgpt','creatives','banking'];
+  let total = defaults.reduce((s,k)=>{
+    const el = document.getElementById('fc-'+k);
+    return s + (el?parseFloat(el.value)||0:0);
+  },0);
+  const fc = state.finance.fixedCosts||{};
+  total += (fc.custom||[]).reduce((s,_,i)=>{
+    const el = document.getElementById('fc-custom-'+i);
+    return s + (el?parseFloat(el.value)||0:0);
+  },0);
+  document.getElementById('fixed-total-monthly').textContent = fmtEur(total);
+  document.getElementById('fixed-total-daily').textContent = fmtEur(total/30);
+}
+
+function saveFixedCosts() {
+  const defaults = ['team','apps','chatgpt','creatives','banking'];
+  const fc = state.finance.fixedCosts||{custom:[]};
+  defaults.forEach(k=>{
+    const el = document.getElementById('fc-'+k);
+    if(el) fc[k] = parseFloat(el.value)||0;
+  });
+  (fc.custom||[]).forEach((_,i)=>{
+    const el = document.getElementById('fc-custom-'+i);
+    if(el) fc.custom[i].amount = parseFloat(el.value)||0;
+  });
+  state.finance.fixedCosts = fc;
+  saveState();
+  alert('✅ Costes fijos guardados');
+  renderFinanceDaily();
+}
+
+function addCustomFixedCost() {
+  const name = prompt('Nombre del coste:');
+  if (!name) return;
+  if (!state.finance.fixedCosts) state.finance.fixedCosts = {custom:[]};
+  if (!state.finance.fixedCosts.custom) state.finance.fixedCosts.custom = [];
+  state.finance.fixedCosts.custom.push({name, amount:0});
+  saveState(); renderFixedCosts();
+}
+
+function removeCustomCost(i) {
+  state.finance.fixedCosts.custom.splice(i,1);
+  saveState(); renderFixedCosts();
+}
+
+function updateCustomName(i, val) {
+  if (state.finance.fixedCosts.custom[i]) state.finance.fixedCosts.custom[i].name = val;
+  saveState();
+}
+
+function renderLiquidity() {
+  const liq = state.finance.liquidity||{};
+  const liquidFunds = [
+    {key:'wise',label:'Wise'},
+    {key:'bank',label:'Banco'},
+    {key:'shopify',label:'Shopify Balance'},
+    {key:'cash',label:'Efectivo'}
+  ];
+  const illiquidFunds = [
+    {key:'paypal',label:'PayPal'},
+    {key:'klarna',label:'Klarna'},
+    {key:'stripe',label:'Stripe'}
+  ];
+  document.getElementById('liquid-funds').innerHTML = liquidFunds.map(f=>`
+    <div class="form-group mb8">
+      <label>${f.label} €</label>
+      <input type="number" id="liq-${f.key}" value="${liq[f.key]||''}" placeholder="0.00" oninput="calcLiquidity()">
+    </div>`).join('');
+  document.getElementById('illiquid-funds').innerHTML = illiquidFunds.map(f=>`
+    <div class="form-group mb8">
+      <label>${f.label} €</label>
+      <input type="number" id="liq-${f.key}" value="${liq[f.key]||''}" placeholder="0.00" oninput="calcLiquidity()">
+    </div>`).join('');
+  document.getElementById('liq-invoices').value = liq.pendingInvoices||'';
+  document.getElementById('liq-debts').value = liq.debts||'';
+  calcLiquidity();
+}
+
+function calcLiquidity() {
+  const get = id => parseFloat(document.getElementById(id)?.value||0)||0;
+  const liquid = get('liq-wise')+get('liq-bank')+get('liq-shopify')+get('liq-cash');
+  const illiquid = get('liq-paypal')+get('liq-klarna')+get('liq-stripe');
+  const invoices = get('liq-invoices');
+  const debts = get('liq-debts');
+  const net = liquid + illiquid - invoices - debts;
+  document.getElementById('liq-total-liquid').textContent = fmtEur(liquid);
+  document.getElementById('liq-total-illiquid').textContent = fmtEur(illiquid);
+  document.getElementById('liq-total-debt').textContent = fmtEur(invoices+debts);
+  const netEl = document.getElementById('liq-net');
+  netEl.textContent = fmtEur(net);
+  netEl.className = 'card-value ' + (net>=0?'text-green':'text-red');
+}
+
+function saveLiquidity() {
+  const get = id => parseFloat(document.getElementById(id)?.value||0)||0;
+  state.finance.liquidity = {
+    wise:get('liq-wise'),bank:get('liq-bank'),shopify:get('liq-shopify'),cash:get('liq-cash'),
+    paypal:get('liq-paypal'),klarna:get('liq-klarna'),stripe:get('liq-stripe'),
+    pendingInvoices:get('liq-invoices'),debts:get('liq-debts')
+  };
+  saveState(); alert('✅ Liquidez guardada');
+}
+
+let monthlyChartInst = null;
+function renderMonthlySummary() {
+  const allMonths = Object.keys(state.finance.daily).sort();
+  const tbody = document.getElementById('monthly-summary-tbody');
+  const cf = getDailyFixedCost();
+  const monthData = allMonths.map(ym => {
+    const days = Object.values(state.finance.daily[ym]||{});
+    const rev = days.reduce((s,d)=>s+(+d.rev||0),0);
+    const cogs = days.reduce((s,d)=>s+(+d.cogs||0),0);
+    const ads = days.reduce((s,d)=>s+(+d.adSpend||0),0);
+    const totalCF = cf * days.length;
+    const profit = rev - cogs - ads - rev*0.03 - totalCF;
+    const roas = ads>0?rev/ads:0;
+    const mp = rev>0?profit/rev*100:0;
+    return {ym,rev,cogs,ads,totalCF,profit,roas,mp};
+  });
+
+  tbody.innerHTML = monthData.length ? monthData.map(m=>`<tr>
+    <td>${m.ym}</td>
+    <td>${fmtEur(m.rev)}</td>
+    <td>${fmtEur(m.cogs)}</td>
+    <td>${fmtEur(m.ads)}</td>
+    <td>${fmtEur(m.totalCF)}</td>
+    <td class="${m.profit>=0?'text-green':'text-red'}" style="font-weight:700;">${fmtEur(m.profit)}</td>
+    <td class="${roasClass(m.roas)}">${m.roas>0?fmt(m.roas):'—'}</td>
+    <td class="${m.mp>=10?'text-green':m.mp>=0?'text-yellow':'text-red'}">${m.rev>0?fmtPct(m.mp):'—'}</td>
+  </tr>`).join('') :
+    '<tr><td colspan="8" class="text-muted" style="text-align:center;padding:24px;">Sin datos financieros</td></tr>';
+
+  if (monthlyChartInst) monthlyChartInst.destroy();
+  const ctx = document.getElementById('monthlyChart').getContext('2d');
+  monthlyChartInst = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: monthData.map(m=>m.ym),
+      datasets: [
+        {label:'Profit €',data:monthData.map(m=>m.profit),backgroundColor:monthData.map(m=>m.profit>=0?'rgba(34,197,94,.6)':'rgba(239,68,68,.6)'),borderRadius:4},
+        {label:'Ingresos €',data:monthData.map(m=>m.rev),type:'line',borderColor:'#6366f1',backgroundColor:'rgba(99,102,241,.1)',tension:.3,pointRadius:3,borderWidth:2}
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#94a3b8',font:{size:11}}}},
+      scales:{x:{ticks:{color:'#94a3b8'},grid:{color:'rgba(255,255,255,.05)'}},y:{ticks:{color:'#94a3b8'},grid:{color:'rgba(255,255,255,.05)'}}}
+    }
+  });
+}
+
+// ============================================================
+// INIT
+// ============================================================
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('fin-month-select').value = currentMonth();
+  renderDashboard();
+  setupDragDrop();
+});
+</script>
+</body>
+</html>
