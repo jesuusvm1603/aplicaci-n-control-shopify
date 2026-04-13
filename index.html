@@ -2321,7 +2321,7 @@ function renderTesting() {
         <span style="font-size:16px;">⚠️</span>
         <span><b>Sin producto vinculado</b> — el ROAS, margen y unidades no se pueden calcular.
           <button class="btn btn-sm" style="margin-left:8px;background:rgba(234,179,8,.2);color:var(--yellow);border:1px solid rgba(234,179,8,.4);"
-            onclick="openCreativeModal('${c.id}')">Vincular producto</button>
+            onclick="linkProductToCreative('${c.id}')">Vincular producto</button>
         </span>
       </div>` : '';
 
@@ -2430,6 +2430,26 @@ function openCreativeModal(id) {
   }).join('');
   for(let i=0;i<7;i++) updateDayRoas(i);
   document.getElementById('creative-modal').classList.add('open');
+}
+
+// Opens the creative modal and immediately focuses + highlights the product selector
+function linkProductToCreative(id) {
+  openCreativeModal(id);
+  setTimeout(() => {
+    const sel = document.getElementById('cm-product');
+    if (!sel) return;
+    sel.focus();
+    // Scroll the modal body so the product field is visible
+    sel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // Pulse highlight so the user knows exactly where to look
+    sel.style.transition = 'border-color .2s, box-shadow .2s';
+    sel.style.borderColor = 'var(--yellow)';
+    sel.style.boxShadow  = '0 0 0 3px rgba(234,179,8,.35)';
+    setTimeout(() => {
+      sel.style.borderColor = '';
+      sel.style.boxShadow  = '';
+    }, 2500);
+  }, 120); // wait for modal to render
 }
 
 function updateDayRoas(i) {
