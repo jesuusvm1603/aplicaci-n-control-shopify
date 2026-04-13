@@ -702,24 +702,29 @@ select option{background:var(--bg3);}
 
 <!-- Import Preview Modal -->
 <div class="modal-overlay" id="import-preview-modal">
-  <div class="modal" style="max-width:700px;">
+  <div class="modal" style="max-width:700px;display:flex;flex-direction:column;max-height:88vh;">
     <div class="modal-header">
-      <h3 id="import-preview-title">Vista previa de importación</h3>
+      <div>
+        <h3 id="import-preview-title">Vista previa de importación</h3>
+        <span id="preview-count" style="font-size:12px;color:var(--text2);"></span>
+      </div>
       <button class="close-btn" onclick="closeModal('import-preview-modal')">✕</button>
     </div>
-    <div class="modal-body" style="padding:0;">
-      <div class="preview-select-all">
-        <input type="checkbox" id="preview-select-all" checked onchange="toggleSelectAll(this.checked)">
-        <label for="preview-select-all" style="cursor:pointer;">Seleccionar todos</label>
-        <span id="preview-count" style="margin-left:auto;color:var(--text2);font-size:12px;"></span>
-      </div>
+    <div style="flex:1;overflow-y:auto;">
       <div class="preview-product-list" id="preview-product-list"></div>
     </div>
-    <div class="modal-footer" style="justify-content:space-between;">
-      <span id="preview-summary" style="font-size:12px;color:var(--text2);"></span>
-      <div class="flex">
-        <button class="btn btn-secondary" onclick="closeModal('import-preview-modal')">Cancelar</button>
-        <button class="btn btn-primary" onclick="confirmImport()">✅ Importar seleccionados</button>
+    <div style="padding:16px 20px;border-top:1px solid var(--border);background:var(--bg2);">
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:14px;font-size:13px;color:var(--text2);">
+        <input type="checkbox" id="preview-select-all" checked onchange="toggleSelectAll(this.checked)"
+          style="width:16px;height:16px;accent-color:var(--accent);flex-shrink:0;">
+        Seleccionar todos los productos
+      </label>
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-secondary" style="flex:0 0 auto;" onclick="closeModal('import-preview-modal')">Cancelar</button>
+        <button id="btn-confirm-import" onclick="confirmImport()"
+          style="flex:1;padding:13px 20px;background:var(--accent);color:#fff;border:none;border-radius:9px;font-size:15px;font-weight:700;cursor:pointer;transition:.2s;letter-spacing:.2px;">
+          ✅ Importar <span id="import-btn-count">0</span> productos seleccionados
+        </button>
       </div>
     </div>
   </div>
@@ -1811,7 +1816,7 @@ function openImportPreview(title, items) {
   const newCount = items.filter(i=>i._isNew).length;
   const updCount = items.length - newCount;
   document.getElementById('preview-count').textContent = `${items.length} productos · ${newCount} nuevos · ${updCount} actualizables`;
-  document.getElementById('preview-summary').textContent = '';
+  document.getElementById('import-btn-count').textContent = '0';
   document.getElementById('preview-select-all').checked = true;
 
   const list = document.getElementById('preview-product-list');
@@ -1844,10 +1849,19 @@ function toggleSelectAll(checked) {
 
 function updatePreviewSummary() {
   const checked = document.querySelectorAll('#preview-product-list input[type=checkbox]:checked').length;
-  const total = document.querySelectorAll('#preview-product-list input[type=checkbox]').length;
-  document.getElementById('preview-summary').textContent = `${checked} de ${total} seleccionados`;
-  document.getElementById('preview-select-all').checked = checked === total;
-  document.getElementById('preview-select-all').indeterminate = checked > 0 && checked < total;
+  const total   = document.querySelectorAll('#preview-product-list input[type=checkbox]').length;
+  const selAll  = document.getElementById('preview-select-all');
+  selAll.checked       = checked === total;
+  selAll.indeterminate = checked > 0 && checked < total;
+  // Update button count
+  const btnCount = document.getElementById('import-btn-count');
+  if (btnCount) btnCount.textContent = checked;
+  // Dim button when nothing selected
+  const btn = document.getElementById('btn-confirm-import');
+  if (btn) btn.style.opacity = checked > 0 ? '1' : '0.4';
+  // Update header count
+  const countEl = document.getElementById('preview-count');
+  if (countEl) countEl.textContent = `${checked} de ${total} seleccionados`;
 }
 
 function confirmImport() {
