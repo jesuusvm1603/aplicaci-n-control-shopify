@@ -437,9 +437,9 @@ select option{background:var(--bg3);}
       </div>
     </div>
     <div class="table-wrap">
-      <div class="table-header"><h3>Creativos en Test Activos</h3></div>
+      <div class="table-header"><h3>Creativos con Datos (Top ROAS)</h3></div>
       <table>
-        <thead><tr><th>Creativo</th><th>Producto</th><th>Plataforma</th><th>ROAS Total</th><th>Gasto</th><th>Estado</th></tr></thead>
+        <thead><tr><th>Creativo</th><th>Producto</th><th>Plataforma</th><th>ROAS</th><th>Gasto</th><th>Ingresos</th><th>Unidades</th><th>Estado</th></tr></thead>
         <tbody id="dash-creatives-table"></tbody>
       </table>
     </div>
@@ -537,6 +537,7 @@ select option{background:var(--bg3);}
         <option value="">Todos los productos</option>
       </select>
     </div>
+    <div id="testing-stats" style="margin-bottom:16px;"></div>
     <div id="testing-list"></div>
   </div>
 
@@ -1221,27 +1222,29 @@ function syncFinanceFromSales() {
   // Step 1 — reset all auto-computed fields in existing days
   Object.values(state.finance.daily).forEach(month => {
     Object.values(month).forEach(day => {
-      day.autoRev    = 0;
-      day.autoCogs   = 0;
-      day.autoOrders = 0;
+      day.autoRev      = 0;
+      day.autoCogs     = 0;
+      day.autoOrders   = 0;
+      day.autoAdSpend  = 0;
     });
   });
 
-  // Helper: ensure a day row exists and add revenue/cog/orders to it
-  function addToDay(dateStr, revAmt, cogAmt, ordersAmt) {
+  // Helper: ensure a day row exists and accumulate all auto fields
+  function addToDay(dateStr, revAmt, cogAmt, ordersAmt, spendAmt) {
     if (!dateStr) return;
     const ym = dateStr.slice(0, 7);
     if (!state.finance.daily[ym]) state.finance.daily[ym] = {};
     if (!state.finance.daily[ym][dateStr]) {
       state.finance.daily[ym][dateStr] = {
         date: dateStr, rev: 0, cpc: 0, visits: 0, orders: 0,
-        adSpend: 0, cogs: 0, autoRev: 0, autoCogs: 0, autoOrders: 0
+        adSpend: 0, cogs: 0, autoRev: 0, autoCogs: 0, autoOrders: 0, autoAdSpend: 0
       };
     }
     const d = state.finance.daily[ym][dateStr];
-    d.autoRev    = (d.autoRev    || 0) + revAmt;
-    d.autoCogs   = (d.autoCogs   || 0) + cogAmt;
-    d.autoOrders = (d.autoOrders || 0) + ordersAmt;
+    d.autoRev     = (d.autoRev     || 0) + (revAmt    || 0);
+    d.autoCogs    = (d.autoCogs    || 0) + (cogAmt    || 0);
+    d.autoOrders  = (d.autoOrders  || 0) + (ordersAmt || 0);
+    d.autoAdSpend = (d.autoAdSpend || 0) + (spendAmt  || 0);
   }
 
   // Step 2 — manual product sales (each has an explicit date)
@@ -1251,12 +1254,14 @@ function syncFinanceFromSales() {
     (p.manualSales || []).forEach(sale => {
       const units = +sale.units || 0;
       if (units > 0 && sale.date) {
-        addToDay(sale.date, units * price, units * cog, units);
+        addToDay(sale.date, units * price, units * cog, units, 0);
       }
     });
   });
 
-  // Step 3 — creative days: day index 0 = launch date, day index i = launch + i days
+  // Step 3 — creative days: day 0 = launch date, day i = launch + i days
+  // Each creative day contributes: revenue → autoRev, COGS → autoCogs,
+  // units → autoOrders, ad spend → autoAdSpend
   state.creatives.forEach(c => {
     const prod  = getProduct(c.productId);
     if (!prod || !c.date) return;
@@ -1264,26 +1269,28 @@ function syncFinanceFromSales() {
     const cog   = +prod.cog   || 0;
     (c.days || []).forEach((day, i) => {
       const rev   = +day.revenue || 0;
-      if (rev <= 0 && (+day.spend||0) <= 0) return;
-      const units = calcUnitsFromRev(rev, price);
-      const d     = new Date(c.date + 'T00:00:00');
+      const spend = +day.spend   || 0;
+      if (rev <= 0 && spend <= 0) return;
+      const units   = calcUnitsFromRev(rev, price);
+      const d       = new Date(c.date + 'T00:00:00');
       d.setDate(d.getDate() + i);
       const dateStr = d.toISOString().slice(0, 10);
-      addToDay(dateStr, rev, units * cog, units);
+      addToDay(dateStr, rev, units * cog, units, spend);
     });
   });
 
-  // Step 4 — campaigns with totalRevenue: use campaign startDate or today
+  // Step 4 — campaigns: totalRevenue + budget attributed to startDate (or today)
   state.campaigns.forEach(c => {
     const prod = getProduct(c.productId);
     if (!prod) return;
-    const rev   = +c.totalRevenue || 0;
-    if (rev <= 0) return;
-    const price = +prod.price || 0;
-    const cog   = +prod.cog   || 0;
-    const units = calcUnitsFromRev(rev, price);
+    const rev    = +c.totalRevenue || 0;
+    const spend  = +c.budget       || 0;
+    if (rev <= 0 && spend <= 0) return;
+    const price   = +prod.price || 0;
+    const cog     = +prod.cog   || 0;
+    const units   = calcUnitsFromRev(rev, price);
     const dateStr = c.startDate || today();
-    addToDay(dateStr, rev, units * cog, units);
+    addToDay(dateStr, rev, units * cog, units, spend);
   });
 }
 
@@ -1385,7 +1392,7 @@ function renderDashboard() {
   const days = Object.values(state.finance.daily[ym] || {});
 
   const totalRev    = days.reduce((s,d)=>s+(+d.rev||0)+(+d.autoRev||0),0);
-  const totalAds    = days.reduce((s,d)=>s+(+d.adSpend||0),0);
+  const totalAds    = days.reduce((s,d)=>s+(+d.adSpend||0)+(+d.autoAdSpend||0),0);
   const totalCogs   = days.reduce((s,d)=>s+(+d.cogs||0)+(+d.autoCogs||0),0);
   const totalCF     = getDailyFixedCost() * days.length;
   const totalProfit = days.reduce((s,d)=>s+calcDayProfit(d),0);
@@ -1504,23 +1511,30 @@ function renderDashboard() {
     </tr>`).join('') :
     '<tr><td colspan="6" class="text-muted" style="text-align:center;padding:24px;">Sin productos activos</td></tr>';
 
-  // Creatives table
+  // Creatives table — show all creatives with data, sorted by ROAS desc
   const ctbody = document.getElementById('dash-creatives-table');
-  const actCreatives = state.creatives.filter(c=>c.status==='en test').slice(0,6);
-  ctbody.innerHTML = actCreatives.length ? actCreatives.map(c=>{
+  const sortedCreatives = [...state.creatives]
+    .filter(c => calcCreativeSpend(c) > 0 || calcCreativeRevenue(c) > 0)
+    .sort((a,b) => calcCreativeROAS(b) - calcCreativeROAS(a))
+    .slice(0, 8);
+  ctbody.innerHTML = sortedCreatives.length ? sortedCreatives.map(c=>{
     const roas = calcCreativeROAS(c);
     const p = getProduct(c.productId);
     const spend = calcCreativeSpend(c);
+    const rev   = calcCreativeRevenue(c);
+    const units = calcCreativeUnits(c);
     return `<tr>
       <td>${c.name}</td>
       <td>${p?p.title:'—'}</td>
       <td>${c.platform||'—'}</td>
       <td>${roasBadge(roas)}</td>
       <td>${fmtEur(spend)}</td>
+      <td class="text-green">${fmtEur(rev)}</td>
+      <td>${units > 0 ? units+' uds.' : '—'}</td>
       <td>${statusBadge(c.status)}</td>
     </tr>`;
   }).join('') :
-    '<tr><td colspan="6" class="text-muted" style="text-align:center;padding:24px;">Sin creativos en test</td></tr>';
+    '<tr><td colspan="8" class="text-muted" style="text-align:center;padding:24px;">Sin creativos con datos aún</td></tr>';
 }
 
 // ============================================================
@@ -2184,6 +2198,38 @@ function renderTesting() {
   sel.innerHTML = '<option value="">Todos los productos</option>' +
     state.products.map(p=>`<option value="${p.id}" ${p.id===selVal?'selected':''}>${p.title}</option>`).join('');
 
+  // ---- Global stats from ALL creatives (not just filtered) ----
+  const allSpend   = state.creatives.reduce((s,c)=>s+calcCreativeSpend(c),0);
+  const allRev     = state.creatives.reduce((s,c)=>s+calcCreativeRevenue(c),0);
+  const allRoas    = allSpend > 0 ? allRev/allSpend : 0;
+  const allUnits   = state.creatives.reduce((s,c)=>s+calcCreativeUnits(c),0);
+  const allCogs    = state.creatives.reduce((s,c)=>{
+    const prod = getProduct(c.productId);
+    return s + calcCreativeUnits(c) * (+( prod ? prod.cog : 0)||0);
+  }, 0);
+  const allProfit  = allRev - allCogs - allSpend;
+  const statsEl = document.getElementById('testing-stats');
+  if (statsEl) {
+    statsEl.innerHTML = state.creatives.length === 0 ? '' : `
+      <div class="cards-grid" style="margin-bottom:0;">
+        <div class="card"><div class="card-label">Gasto Total Creativos</div>
+          <div class="card-value">${fmtEur(allSpend)}</div>
+          <div class="card-sub neutral">→ auto-sumado a Meta Ads en Finanzas</div></div>
+        <div class="card"><div class="card-label">Ingresos Totales</div>
+          <div class="card-value">${fmtEur(allRev)}</div>
+          <div class="card-sub neutral">→ auto-sumado a Ingresos en Finanzas</div></div>
+        <div class="card"><div class="card-label">ROAS Global</div>
+          <div class="card-value ${roasClass(allRoas)}">${fmt(allRoas)}</div>
+          <div class="card-sub neutral">${allSpend>0?fmtEur(allRev)+' / '+fmtEur(allSpend):'Sin datos'}</div></div>
+        <div class="card"><div class="card-label">Unidades Vendidas</div>
+          <div class="card-value">${allUnits}</div>
+          <div class="card-sub neutral">→ visible en Catálogo por producto</div></div>
+        <div class="card"><div class="card-label">Profit Neto Tests</div>
+          <div class="card-value ${allProfit>=0?'text-green':'text-red'}">${fmtEur(allProfit)}</div>
+          <div class="card-sub neutral">Rev - COGS - Gasto Ads</div></div>
+      </div>`;
+  }
+
   let creatives = state.creatives.filter(c => {
     const matchSearch = !search || c.name.toLowerCase().includes(search);
     const matchStatus = !filterStatus || c.status === filterStatus;
@@ -2600,9 +2646,9 @@ function getDailyFixedCost() {
 }
 
 function calcDayProfit(d) {
-  const rev  = (+d.rev||0) + (+d.autoRev||0);
-  const cogs = (+d.cogs||0) + (+d.autoCogs||0);
-  const ads  = +d.adSpend||0;
+  const rev  = (+d.rev||0)     + (+d.autoRev||0);
+  const cogs = (+d.cogs||0)    + (+d.autoCogs||0);
+  const ads  = (+d.adSpend||0) + (+d.autoAdSpend||0);
   const com3 = rev * 0.03;
   const cf   = getDailyFixedCost();
   return rev - cogs - ads - com3 - cf;
@@ -2631,9 +2677,10 @@ function renderFinanceDaily() {
     const autoRev   = +d.autoRev||0;
     const autoCogs  = +d.autoCogs||0;
     const autoOrd   = +d.autoOrders||0;
+    const autoAds   = +d.autoAdSpend||0;
     const rev    = (+d.rev||0) + autoRev;
     const cogs   = (+d.cogs||0) + autoCogs;
-    const ads    = +d.adSpend||0;
+    const ads    = (+d.adSpend||0) + autoAds;
     const orders = (+d.orders||0) + autoOrd;
     const visits = +d.visits||0;
     const aov = orders > 0 ? rev/orders : 0;
@@ -2645,11 +2692,12 @@ function renderFinanceDaily() {
     const profit = rev - cogs - ads - com3 - cf;
     const profitPct = rev > 0 ? profit/rev*100 : 0;
     const roas = ads > 0 ? rev/ads : 0;
-    const autoTag = autoRev > 0 ? `<span title="Auto: +${fmtEur(autoRev)} ingresos / +${fmtEur(autoCogs)} COGS" style="font-size:10px;color:var(--accent2);margin-left:4px;">⚡</span>` : '';
+    const autoRevTag = autoRev > 0 ? `<span title="Auto desde creativos/campañas: +${fmtEur(autoRev)} ingresos" style="font-size:10px;color:var(--accent2);margin-left:4px;">⚡</span>` : '';
+    const autoAdsTag = autoAds > 0 ? `<span title="Auto desde creativos/campañas: +${fmtEur(autoAds)} gasto ads" style="font-size:10px;color:var(--accent2);margin-left:4px;">⚡</span>` : '';
 
     return `<tr>
       <td>${d.date.slice(5)}</td>
-      <td><input type="number" value="${d.rev||''}" placeholder="0" onchange="updateDay('${ym}','${d.date}','rev',this.value)" style="width:80px;">${autoTag}</td>
+      <td><input type="number" value="${d.rev||''}" placeholder="0" onchange="updateDay('${ym}','${d.date}','rev',this.value)" style="width:80px;">${autoRevTag}</td>
       <td><input type="number" value="${d.cpc||''}" placeholder="0" onchange="updateDay('${ym}','${d.date}','cpc',this.value)" style="width:60px;"></td>
       <td><input type="number" value="${d.visits||''}" placeholder="0" onchange="updateDay('${ym}','${d.date}','visits',this.value)" style="width:70px;"></td>
       <td><input type="number" value="${d.orders||''}" placeholder="0" onchange="updateDay('${ym}','${d.date}','orders',this.value)" style="width:60px;"></td>
@@ -2657,7 +2705,7 @@ function renderFinanceDaily() {
       <td class="${cr>=2?'text-green':cr>=1?'text-yellow':'text-red'}">${fmtPct(cr)}</td>
       <td><input type="number" value="${d.cogs||''}" placeholder="0" onchange="updateDay('${ym}','${d.date}','cogs',this.value)" style="width:80px;"></td>
       <td class="${cogsPct<=40?'text-green':cogsPct<=60?'text-yellow':'text-red'}">${fmtPct(cogsPct)}</td>
-      <td><input type="number" value="${d.adSpend||''}" placeholder="0" onchange="updateDay('${ym}','${d.date}','adSpend',this.value)" style="width:80px;"></td>
+      <td><input type="number" value="${d.adSpend||''}" placeholder="0" onchange="updateDay('${ym}','${d.date}','adSpend',this.value)" style="width:80px;">${autoAdsTag}</td>
       <td class="${adsPct<=30?'text-green':adsPct<=50?'text-yellow':'text-red'}">${fmtPct(adsPct)}</td>
       <td>${fmtEur(com3)}</td>
       <td>${fmtEur(com6)}</td>
@@ -2670,9 +2718,9 @@ function renderFinanceDaily() {
   }).join('');
 
   // Totals row
-  const totRev  = sorted.reduce((s,d)=>s+(+d.rev||0)+(+d.autoRev||0),0);
-  const totAds  = sorted.reduce((s,d)=>s+(+d.adSpend||0),0);
-  const totCogs = sorted.reduce((s,d)=>s+(+d.cogs||0)+(+d.autoCogs||0),0);
+  const totRev    = sorted.reduce((s,d)=>s+(+d.rev||0)+(+d.autoRev||0),0);
+  const totAds    = sorted.reduce((s,d)=>s+(+d.adSpend||0)+(+d.autoAdSpend||0),0);
+  const totCogs   = sorted.reduce((s,d)=>s+(+d.cogs||0)+(+d.autoCogs||0),0);
   const totOrders = sorted.reduce((s,d)=>s+(+d.orders||0)+(+d.autoOrders||0),0);
   const totCF = cf * sorted.length;
   const totCom3 = totRev * 0.03;
