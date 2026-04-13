@@ -1206,6 +1206,110 @@ function saveState() {
 let state = defaultState(); // will be loaded after auth check
 
 // ============================================================
+// CENTRAL EVENT SYSTEM
+// ============================================================
+
+/**
+ * syncFinanceFromSales()
+ * Recalculates autoRev, autoCogs and autoOrders for every day in
+ * finance.daily based on:
+ *   - Product manual sales (each entry has a date)
+ *   - Creative days (day 0 = creative.date, day N = creative.date + N)
+ * Then persists state. Call this before any render after data changes.
+ */
+function syncFinanceFromSales() {
+  // Step 1 — reset all auto-computed fields in existing days
+  Object.values(state.finance.daily).forEach(month => {
+    Object.values(month).forEach(day => {
+      day.autoRev    = 0;
+      day.autoCogs   = 0;
+      day.autoOrders = 0;
+    });
+  });
+
+  // Helper: ensure a day row exists and add revenue/cog/orders to it
+  function addToDay(dateStr, revAmt, cogAmt, ordersAmt) {
+    if (!dateStr) return;
+    const ym = dateStr.slice(0, 7);
+    if (!state.finance.daily[ym]) state.finance.daily[ym] = {};
+    if (!state.finance.daily[ym][dateStr]) {
+      state.finance.daily[ym][dateStr] = {
+        date: dateStr, rev: 0, cpc: 0, visits: 0, orders: 0,
+        adSpend: 0, cogs: 0, autoRev: 0, autoCogs: 0, autoOrders: 0
+      };
+    }
+    const d = state.finance.daily[ym][dateStr];
+    d.autoRev    = (d.autoRev    || 0) + revAmt;
+    d.autoCogs   = (d.autoCogs   || 0) + cogAmt;
+    d.autoOrders = (d.autoOrders || 0) + ordersAmt;
+  }
+
+  // Step 2 — manual product sales (each has an explicit date)
+  state.products.forEach(p => {
+    const price = +p.price || 0;
+    const cog   = +p.cog   || 0;
+    (p.manualSales || []).forEach(sale => {
+      const units = +sale.units || 0;
+      if (units > 0 && sale.date) {
+        addToDay(sale.date, units * price, units * cog, units);
+      }
+    });
+  });
+
+  // Step 3 — creative days: day index 0 = launch date, day index i = launch + i days
+  state.creatives.forEach(c => {
+    const prod  = getProduct(c.productId);
+    if (!prod || !c.date) return;
+    const price = +prod.price || 0;
+    const cog   = +prod.cog   || 0;
+    (c.days || []).forEach((day, i) => {
+      const rev   = +day.revenue || 0;
+      if (rev <= 0 && (+day.spend||0) <= 0) return;
+      const units = calcUnitsFromRev(rev, price);
+      const d     = new Date(c.date + 'T00:00:00');
+      d.setDate(d.getDate() + i);
+      const dateStr = d.toISOString().slice(0, 10);
+      addToDay(dateStr, rev, units * cog, units);
+    });
+  });
+
+  // Step 4 — campaigns with totalRevenue: use campaign startDate or today
+  state.campaigns.forEach(c => {
+    const prod = getProduct(c.productId);
+    if (!prod) return;
+    const rev   = +c.totalRevenue || 0;
+    if (rev <= 0) return;
+    const price = +prod.price || 0;
+    const cog   = +prod.cog   || 0;
+    const units = calcUnitsFromRev(rev, price);
+    const dateStr = c.startDate || today();
+    addToDay(dateStr, rev, units * cog, units);
+  });
+}
+
+/**
+ * onStateChanged(source?)
+ * Single entry point after any meaningful data mutation.
+ * Syncs derived finance values, persists, then refreshes the active module.
+ */
+function onStateChanged(source) {
+  syncFinanceFromSales();
+  saveState();
+  refreshActiveModule();
+}
+
+function refreshActiveModule() {
+  const active = document.querySelector('.module.active');
+  if (!active) return;
+  const name = active.id.replace('mod-', '');
+  if (name === 'dashboard') renderDashboard();
+  else if (name === 'catalog')  renderCatalog();
+  else if (name === 'testing')  renderTesting();
+  else if (name === 'scaling')  renderScaling();
+  else if (name === 'finance')  renderFinanceDaily();
+}
+
+// ============================================================
 // NAVIGATION
 // ============================================================
 function showModule(name) {
@@ -1280,12 +1384,12 @@ function renderDashboard() {
   const ym = currentMonth();
   const days = Object.values(state.finance.daily[ym] || {});
 
-  const totalRev = days.reduce((s,d)=>s+(+d.rev||0),0);
-  const totalAds = days.reduce((s,d)=>s+(+d.adSpend||0),0);
-  const totalCogs = days.reduce((s,d)=>s+(+d.cogs||0),0);
-  const totalCF = getDailyFixedCost() * days.length;
-  const totalProfit = days.reduce((s,d)=>s+(calcDayProfit(d)),0);
-  const totalOrders = days.reduce((s,d)=>s+(+d.orders||0),0);
+  const totalRev    = days.reduce((s,d)=>s+(+d.rev||0)+(+d.autoRev||0),0);
+  const totalAds    = days.reduce((s,d)=>s+(+d.adSpend||0),0);
+  const totalCogs   = days.reduce((s,d)=>s+(+d.cogs||0)+(+d.autoCogs||0),0);
+  const totalCF     = getDailyFixedCost() * days.length;
+  const totalProfit = days.reduce((s,d)=>s+calcDayProfit(d),0);
+  const totalOrders = days.reduce((s,d)=>s+(+d.orders||0)+(+d.autoOrders||0),0);
   const roas = totalAds > 0 ? totalRev / totalAds : 0;
   const activeProducts = state.products.filter(p=>p.status==='activo').length;
   const testCreatives = state.creatives.filter(c=>c.status==='en test').length;
@@ -1313,7 +1417,7 @@ function renderDashboard() {
     const row = (state.finance.daily[ym]||{})[key];
     dayLabels.push(d);
     profitData.push(row ? calcDayProfit(row) : null);
-    revenueData.push(row ? (+row.rev||0) : null);
+    revenueData.push(row ? ((+row.rev||0)+(+row.autoRev||0)) : null);
   }
   if (profitChartInst) profitChartInst.destroy();
   const ctx = document.getElementById('profitChart').getContext('2d');
@@ -1909,9 +2013,8 @@ function confirmImport() {
   });
 
   state.lastSync = new Date().toISOString();
-  saveState();
+  onStateChanged('import');
   closeModal('import-preview-modal');
-  renderCatalog();
 
   // Collapse import panel after successful import
   const body = document.getElementById('import-panel-body');
@@ -2017,7 +2120,7 @@ function addManualSale() {
   if (!p) return;
   if (!p.manualSales) p.manualSales = [];
   p.manualSales.push({date, units, note});
-  saveState();
+  onStateChanged('manual-sale');
   renderManualSalesList(id);
   // Refresh sales summary
   editProduct(id);
@@ -2029,7 +2132,7 @@ function deleteManualSale(productId, idx) {
   const p = getProduct(productId);
   if (!p || !p.manualSales) return;
   p.manualSales.splice(idx, 1);
-  saveState();
+  onStateChanged('manual-sale');
   renderManualSalesList(productId);
   editProduct(productId);
 }
@@ -2063,9 +2166,8 @@ function saveProduct() {
   } else {
     state.products.push({id:uid(), images:[], variants:[], manualSales:[], ...data});
   }
-  saveState();
+  onStateChanged('product');
   closeModal('product-modal');
-  renderCatalog();
 }
 
 // ============================================================
@@ -2255,15 +2357,14 @@ function saveCreative() {
 
   if (id) { const c = state.creatives.find(x=>x.id===id); if(c) Object.assign(c,data); }
   else { state.creatives.push({id:uid(),...data}); }
-  saveState();
+  onStateChanged('creative');
   closeModal('creative-modal');
-  renderTesting();
 }
 
 function deleteCreative(id) {
   if (!confirm('¿Eliminar este creativo?')) return;
   state.creatives = state.creatives.filter(c=>c.id!==id);
-  saveState(); renderTesting();
+  onStateChanged('creative');
 }
 
 // ============================================================
@@ -2373,13 +2474,14 @@ function saveCampaign() {
   };
   if (id) { const c = state.campaigns.find(x=>x.id===id); if(c) Object.assign(c,data); }
   else { state.campaigns.push({id:uid(),...data}); }
-  saveState(); closeModal('campaign-modal'); renderScaling();
+  onStateChanged('campaign');
+  closeModal('campaign-modal');
 }
 
 function deleteCampaign(id) {
   if (!confirm('¿Eliminar campaña?')) return;
   state.campaigns = state.campaigns.filter(c=>c.id!==id);
-  saveState(); renderScaling();
+  onStateChanged('campaign');
 }
 
 function addReturn() {
@@ -2389,16 +2491,15 @@ function addReturn() {
   if (!date || !amount) { alert('Completa fecha e importe'); return; }
   if (!state.returns) state.returns = [];
   state.returns.push({date,desc,amount});
-  saveState();
+  onStateChanged('return');
   document.getElementById('ret-date').value = '';
   document.getElementById('ret-desc').value = '';
   document.getElementById('ret-amount').value = '';
-  renderScaling();
 }
 
 function deleteReturn(i) {
   state.returns.splice(i,1);
-  saveState(); renderScaling();
+  onStateChanged('return');
 }
 
 // CSV Import
@@ -2472,7 +2573,7 @@ function applyCSVToFinance() {
     if (!state.finance.daily[rowYm][key]) state.finance.daily[rowYm][key] = {date:key};
     state.finance.daily[rowYm][key].adSpend = (state.finance.daily[rowYm][key].adSpend||0) + spend;
   });
-  saveState();
+  onStateChanged('csv-finance');
   alert('✅ Datos de Meta Ads aplicados a Finanzas');
   showModule('finance');
 }
@@ -2499,12 +2600,11 @@ function getDailyFixedCost() {
 }
 
 function calcDayProfit(d) {
-  const rev = +d.rev||0;
-  const cogs = +d.cogs||0;
-  const ads = +d.adSpend||0;
+  const rev  = (+d.rev||0) + (+d.autoRev||0);
+  const cogs = (+d.cogs||0) + (+d.autoCogs||0);
+  const ads  = +d.adSpend||0;
   const com3 = rev * 0.03;
-  const com6 = rev * 0.06;
-  const cf = getDailyFixedCost();
+  const cf   = getDailyFixedCost();
   return rev - cogs - ads - com3 - cf;
 }
 
@@ -2516,7 +2616,7 @@ function addFinanceDay() {
   if (!state.finance.daily[ym][dateStr]) {
     state.finance.daily[ym][dateStr] = {date:dateStr,rev:0,cpc:0,visits:0,orders:0,adSpend:0,cogs:0};
   }
-  saveState(); renderFinanceDaily();
+  onStateChanged('day');
 }
 
 function renderFinanceDaily() {
@@ -2528,10 +2628,13 @@ function renderFinanceDaily() {
   const cols = ['rev','cpc','visits','orders','adSpend','cogs'];
   const tbody = document.getElementById('finance-daily-tbody');
   tbody.innerHTML = sorted.map(d => {
-    const rev = +d.rev||0;
-    const cogs = +d.cogs||0;
-    const ads = +d.adSpend||0;
-    const orders = +d.orders||0;
+    const autoRev   = +d.autoRev||0;
+    const autoCogs  = +d.autoCogs||0;
+    const autoOrd   = +d.autoOrders||0;
+    const rev    = (+d.rev||0) + autoRev;
+    const cogs   = (+d.cogs||0) + autoCogs;
+    const ads    = +d.adSpend||0;
+    const orders = (+d.orders||0) + autoOrd;
     const visits = +d.visits||0;
     const aov = orders > 0 ? rev/orders : 0;
     const cr = visits > 0 ? orders/visits*100 : 0;
@@ -2542,10 +2645,11 @@ function renderFinanceDaily() {
     const profit = rev - cogs - ads - com3 - cf;
     const profitPct = rev > 0 ? profit/rev*100 : 0;
     const roas = ads > 0 ? rev/ads : 0;
+    const autoTag = autoRev > 0 ? `<span title="Auto: +${fmtEur(autoRev)} ingresos / +${fmtEur(autoCogs)} COGS" style="font-size:10px;color:var(--accent2);margin-left:4px;">⚡</span>` : '';
 
     return `<tr>
       <td>${d.date.slice(5)}</td>
-      <td><input type="number" value="${d.rev||''}" placeholder="0" onchange="updateDay('${ym}','${d.date}','rev',this.value)" style="width:80px;"></td>
+      <td><input type="number" value="${d.rev||''}" placeholder="0" onchange="updateDay('${ym}','${d.date}','rev',this.value)" style="width:80px;">${autoTag}</td>
       <td><input type="number" value="${d.cpc||''}" placeholder="0" onchange="updateDay('${ym}','${d.date}','cpc',this.value)" style="width:60px;"></td>
       <td><input type="number" value="${d.visits||''}" placeholder="0" onchange="updateDay('${ym}','${d.date}','visits',this.value)" style="width:70px;"></td>
       <td><input type="number" value="${d.orders||''}" placeholder="0" onchange="updateDay('${ym}','${d.date}','orders',this.value)" style="width:60px;"></td>
@@ -2566,10 +2670,10 @@ function renderFinanceDaily() {
   }).join('');
 
   // Totals row
-  const totRev = sorted.reduce((s,d)=>s+(+d.rev||0),0);
-  const totAds = sorted.reduce((s,d)=>s+(+d.adSpend||0),0);
-  const totCogs = sorted.reduce((s,d)=>s+(+d.cogs||0),0);
-  const totOrders = sorted.reduce((s,d)=>s+(+d.orders||0),0);
+  const totRev  = sorted.reduce((s,d)=>s+(+d.rev||0)+(+d.autoRev||0),0);
+  const totAds  = sorted.reduce((s,d)=>s+(+d.adSpend||0),0);
+  const totCogs = sorted.reduce((s,d)=>s+(+d.cogs||0)+(+d.autoCogs||0),0);
+  const totOrders = sorted.reduce((s,d)=>s+(+d.orders||0)+(+d.autoOrders||0),0);
   const totCF = cf * sorted.length;
   const totCom3 = totRev * 0.03;
   const totProfit = totRev - totCogs - totAds - totCom3 - totCF;
@@ -2590,14 +2694,13 @@ function updateDay(ym, date, field, value) {
   if (!state.finance.daily[ym]) state.finance.daily[ym] = {};
   if (!state.finance.daily[ym][date]) state.finance.daily[ym][date] = {date};
   state.finance.daily[ym][date][field] = parseFloat(value)||0;
-  saveState();
-  renderFinanceDaily();
+  onStateChanged('day');
 }
 
 function deleteDay(ym, date) {
   if (!confirm('¿Eliminar este día?')) return;
   delete state.finance.daily[ym][date];
-  saveState(); renderFinanceDaily();
+  onStateChanged('day');
 }
 
 function renderFixedCosts() {
@@ -2651,9 +2754,8 @@ function saveFixedCosts() {
     if(el) fc.custom[i].amount = parseFloat(el.value)||0;
   });
   state.finance.fixedCosts = fc;
-  saveState();
+  onStateChanged('fixedcosts');
   alert('✅ Costes fijos guardados');
-  renderFinanceDaily();
 }
 
 function addCustomFixedCost() {
@@ -2662,12 +2764,12 @@ function addCustomFixedCost() {
   if (!state.finance.fixedCosts) state.finance.fixedCosts = {custom:[]};
   if (!state.finance.fixedCosts.custom) state.finance.fixedCosts.custom = [];
   state.finance.fixedCosts.custom.push({name, amount:0});
-  saveState(); renderFixedCosts();
+  onStateChanged('fixedcosts'); renderFixedCosts();
 }
 
 function removeCustomCost(i) {
   state.finance.fixedCosts.custom.splice(i,1);
-  saveState(); renderFixedCosts();
+  onStateChanged('fixedcosts'); renderFixedCosts();
 }
 
 function updateCustomName(i, val) {
