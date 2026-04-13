@@ -192,6 +192,37 @@ select option{background:var(--bg3);}
 .search-row{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
 .search-row input{flex:1;min-width:200px;}
 .search-row select{min-width:140px;}
+
+/* IMPORT PANEL */
+.import-panel{background:var(--bg2);border:1px solid var(--border);border-radius:10px;margin-bottom:20px;overflow:hidden;}
+.import-panel-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;}
+.import-panel-header h3{font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px;}
+.import-panel-body{padding:16px;display:none;}
+.import-panel-body.open{display:block;}
+.import-tabs{display:flex;gap:0;margin-bottom:16px;border:1px solid var(--border);border-radius:8px;overflow:hidden;width:fit-content;}
+.import-tab{padding:8px 20px;cursor:pointer;font-size:13px;color:var(--text2);transition:.2s;border-right:1px solid var(--border);}
+.import-tab:last-child{border-right:none;}
+.import-tab.active{background:var(--accent);color:#fff;}
+.url-input-row{display:flex;gap:8px;align-items:stretch;}
+.url-input-row input{flex:1;}
+.import-status{margin-top:10px;padding:10px 14px;border-radius:7px;font-size:13px;display:none;}
+.import-status.info{background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.3);color:var(--accent2);display:block;}
+.import-status.success{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:var(--green);display:block;}
+.import-status.error{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:var(--red);display:block;}
+
+/* PREVIEW MODAL */
+.preview-product-list{max-height:400px;overflow-y:auto;}
+.preview-item{display:flex;align-items:center;gap:12px;padding:10px;border-bottom:1px solid var(--border);cursor:pointer;}
+.preview-item:last-child{border-bottom:none;}
+.preview-item:hover{background:var(--bg3);}
+.preview-item img{width:48px;height:48px;object-fit:cover;border-radius:6px;background:var(--bg3);flex-shrink:0;}
+.preview-item-info{flex:1;min-width:0;}
+.preview-item-info h4{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.preview-item-info p{font-size:12px;color:var(--text2);margin-top:2px;}
+.preview-item input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);flex-shrink:0;}
+.preview-select-all{display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--bg3);font-size:13px;font-weight:600;}
+.preview-badge-new{background:rgba(34,197,94,.15);color:var(--green);font-size:10px;padding:1px 6px;border-radius:10px;font-weight:700;}
+.preview-badge-update{background:rgba(99,102,241,.15);color:var(--accent2);font-size:10px;padding:1px 6px;border-radius:10px;font-weight:700;}
 </style>
 </head>
 <body>
@@ -265,13 +296,52 @@ select option{background:var(--bg3);}
     <div class="page-header flex-between">
       <div>
         <h1>Catálogo de Productos</h1>
-        <p>Gestiona tu inventario y costes</p>
+        <p id="cat-last-sync">Gestiona tu inventario y costes</p>
       </div>
-      <div class="flex">
-        <button class="btn btn-secondary" onclick="syncProducts()">🔄 Sincronizar</button>
-        <button class="btn btn-primary" onclick="importShopify()">🛍 Importar desde Shopify</button>
+      <button class="btn btn-secondary" onclick="syncProducts()">🔄 Sincronizar</button>
+    </div>
+
+    <!-- IMPORT PANEL -->
+    <div class="import-panel">
+      <div class="import-panel-header" onclick="toggleImportPanel()">
+        <h3>📥 <span>Importar Productos</span></h3>
+        <span id="import-panel-toggle" style="color:var(--text2);font-size:12px;">▼ Expandir</span>
+      </div>
+      <div class="import-panel-body" id="import-panel-body">
+        <div class="import-tabs">
+          <div class="import-tab active" id="itab-url" onclick="switchImportTab('url')">🌐 Por URL de tienda</div>
+          <div class="import-tab" id="itab-csv" onclick="switchImportTab('csv')">📄 Por CSV de Shopify</div>
+        </div>
+
+        <!-- TAB: URL -->
+        <div id="import-tab-url">
+          <p style="font-size:13px;color:var(--text2);margin-bottom:12px;">
+            Introduce la URL de cualquier tienda Shopify. La app añadirá <code style="background:var(--bg3);padding:1px 5px;border-radius:4px;">/products.json</code> automáticamente.
+          </p>
+          <div class="url-input-row">
+            <input type="text" id="shopify-url-input" placeholder="https://sutienda.myshopify.com" value="">
+            <button class="btn btn-primary" id="btn-fetch-url" onclick="fetchByURL()">🔍 Buscar productos</button>
+          </div>
+          <div id="url-import-status" class="import-status"></div>
+        </div>
+
+        <!-- TAB: CSV -->
+        <div id="import-tab-csv" style="display:none;">
+          <p style="font-size:13px;color:var(--text2);margin-bottom:12px;">
+            Exporta tus productos desde <b>Shopify Admin → Productos → Exportar</b> y sube el CSV aquí. Las columnas se mapean automáticamente.
+          </p>
+          <div class="drop-zone" id="catalog-csv-drop" onclick="document.getElementById('catalog-csv-input').click()">
+            <div class="icon">📄</div>
+            <p style="color:var(--text2);margin-bottom:6px;">Arrastra el CSV de Shopify o haz clic para seleccionar</p>
+            <p style="font-size:11px;color:var(--text2);">Columnas detectadas: Title, Variant Price, Image Src, Vendor, Type, Tags...</p>
+          </div>
+          <input type="file" id="catalog-csv-input" accept=".csv" style="display:none" onchange="handleCatalogCSV(this.files[0])">
+          <div id="csv-import-status" class="import-status"></div>
+        </div>
       </div>
     </div>
+
+    <!-- SEARCH & FILTERS -->
     <div class="search-row">
       <input type="text" id="cat-search" placeholder="Buscar productos..." oninput="renderCatalog()">
       <select id="cat-filter-cat" onchange="renderCatalog()">
@@ -472,6 +542,31 @@ select option{background:var(--bg3);}
 </main>
 
 <!-- ===== MODALS ===== -->
+
+<!-- Import Preview Modal -->
+<div class="modal-overlay" id="import-preview-modal">
+  <div class="modal" style="max-width:700px;">
+    <div class="modal-header">
+      <h3 id="import-preview-title">Vista previa de importación</h3>
+      <button class="close-btn" onclick="closeModal('import-preview-modal')">✕</button>
+    </div>
+    <div class="modal-body" style="padding:0;">
+      <div class="preview-select-all">
+        <input type="checkbox" id="preview-select-all" checked onchange="toggleSelectAll(this.checked)">
+        <label for="preview-select-all" style="cursor:pointer;">Seleccionar todos</label>
+        <span id="preview-count" style="margin-left:auto;color:var(--text2);font-size:12px;"></span>
+      </div>
+      <div class="preview-product-list" id="preview-product-list"></div>
+    </div>
+    <div class="modal-footer" style="justify-content:space-between;">
+      <span id="preview-summary" style="font-size:12px;color:var(--text2);"></span>
+      <div class="flex">
+        <button class="btn btn-secondary" onclick="closeModal('import-preview-modal')">Cancelar</button>
+        <button class="btn btn-primary" onclick="confirmImport()">✅ Importar seleccionados</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- Product Modal -->
 <div class="modal-overlay" id="product-modal">
@@ -900,7 +995,7 @@ function renderCatalog() {
   if (!products.length) {
     grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
       <div class="empty-icon">👗</div>
-      <p>No hay productos. Usa "Importar desde Shopify" para comenzar.</p></div>`;
+      <p>No hay productos. Usa el panel de importación para comenzar.</p></div>`;
     return;
   }
   grid.innerHTML = products.map(p => {
@@ -923,55 +1018,370 @@ function renderCatalog() {
       </div>
     </div>`;
   }).join('');
+
+  // Update last sync label
+  const syncEl = document.getElementById('cat-last-sync');
+  if (syncEl && state.lastSync) {
+    const d = new Date(state.lastSync);
+    syncEl.textContent = `Última sincronización: ${d.toLocaleString('es-ES')} · ${state.products.length} productos`;
+  }
 }
 
-async function importShopify() {
-  const btn = event.currentTarget;
+// --- Import Panel UI ---
+function toggleImportPanel() {
+  const body = document.getElementById('import-panel-body');
+  const tog = document.getElementById('import-panel-toggle');
+  const open = body.classList.toggle('open');
+  tog.textContent = open ? '▲ Contraer' : '▼ Expandir';
+}
+
+function switchImportTab(tab) {
+  document.getElementById('import-tab-url').style.display = tab==='url' ? 'block' : 'none';
+  document.getElementById('import-tab-csv').style.display = tab==='csv' ? 'block' : 'none';
+  document.getElementById('itab-url').classList.toggle('active', tab==='url');
+  document.getElementById('itab-csv').classList.toggle('active', tab==='csv');
+}
+
+function setImportStatus(elId, msg, type) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  el.textContent = msg;
+  el.className = 'import-status ' + type;
+}
+
+// --- METHOD 1: Import by URL ---
+let _pendingImportItems = [];
+
+async function fetchByURL() {
+  let url = (document.getElementById('shopify-url-input').value||'').trim();
+  if (!url) { setImportStatus('url-import-status','Introduce una URL válida','error'); return; }
+  if (!url.startsWith('http')) url = 'https://' + url;
+  url = url.replace(/\/$/, '');
+  const apiUrl = url + '/products.json?limit=250';
+
+  const btn = document.getElementById('btn-fetch-url');
   btn.disabled = true;
-  btn.textContent = '⏳ Importando...';
+  btn.textContent = '⏳ Buscando...';
+  setImportStatus('url-import-status', `Conectando con ${url}...`, 'info');
+
   try {
-    const res = await fetch('https://catalinacastellanos.com/products.json?limit=250');
-    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const res = await fetch(apiUrl);
+    if (!res.ok) throw new Error(`Error HTTP ${res.status}. La tienda puede no ser pública o no ser Shopify.`);
     const data = await res.json();
-    const products = data.products || [];
-    let added = 0, updated = 0;
-    products.forEach(sp => {
-      const existing = state.products.find(p => p.handle === sp.handle);
+    const rawProducts = data.products || [];
+    if (!rawProducts.length) {
+      setImportStatus('url-import-status','No se encontraron productos en esta tienda.','error');
+      btn.disabled = false; btn.textContent = '🔍 Buscar productos'; return;
+    }
+
+    // Map Shopify JSON → preview items
+    _pendingImportItems = rawProducts.map(sp => {
       const variant = sp.variants && sp.variants[0];
-      const price = variant ? parseFloat(variant.price) : 0;
-      const images = sp.images ? sp.images.map(i=>i.src) : [];
-      if (existing) {
-        existing.title = sp.title;
-        existing.price = price;
-        existing.images = images;
-        existing.shopifyId = sp.id;
-        existing.url = 'https://catalinacastellanos.com/products/' + sp.handle;
-        existing.variants = sp.variants;
-        updated++;
-      } else {
-        state.products.push({
-          id: uid(), shopifyId: sp.id, handle: sp.handle,
-          title: sp.title, description: sp.body_html||'',
-          price, images, variants: sp.variants||[],
-          url: 'https://catalinacastellanos.com/products/'+sp.handle,
-          cog: 0, category: 'Otros', supplier: '', status: 'activo', notes: ''
-        });
-        added++;
-      }
+      const price = variant ? parseFloat(variant.price)||0 : 0;
+      const images = (sp.images||[]).map(i=>i.src);
+      const isNew = !state.products.find(p=>p.handle===sp.handle);
+      return {
+        _source: 'url', _baseUrl: url,
+        shopifyId: sp.id, handle: sp.handle,
+        title: sp.title, description: sp.body_html||'',
+        price, images, variants: sp.variants||[],
+        url: url + '/products/' + sp.handle,
+        supplier: sp.vendor||'', category: 'Otros',
+        cog: 0, status: 'activo', notes: '',
+        _isNew: isNew
+      };
     });
-    state.lastSync = new Date().toISOString();
+
+    state.lastImportUrl = url;
     saveState();
-    renderCatalog();
-    alert(`✅ Importación completa:\n${added} nuevos productos\n${updated} actualizados`);
+    setImportStatus('url-import-status',
+      `✅ ${rawProducts.length} productos encontrados — ${_pendingImportItems.filter(p=>p._isNew).length} nuevos, ${_pendingImportItems.filter(p=>!p._isNew).length} actualizables.`,
+      'success');
+    openImportPreview(`Importar desde ${url}`, _pendingImportItems);
+
   } catch(e) {
-    alert('Error al importar: ' + e.message + '\nRevisa la consola para más detalles.');
+    setImportStatus('url-import-status', '❌ ' + e.message, 'error');
     console.error(e);
   }
   btn.disabled = false;
-  btn.textContent = '🛍 Importar desde Shopify';
+  btn.textContent = '🔍 Buscar productos';
 }
 
-function syncProducts() { importShopify(); }
+// --- METHOD 2: Import by CSV ---
+function setupCatalogCSVDrop() {
+  const zone = document.getElementById('catalog-csv-drop');
+  if (!zone) return;
+  zone.addEventListener('dragover', e=>{e.preventDefault();zone.classList.add('drag-over');});
+  zone.addEventListener('dragleave', ()=>zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', e=>{
+    e.preventDefault(); zone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) { document.getElementById('catalog-csv-input').files; handleCatalogCSV(file); }
+  });
+}
+
+function handleCatalogCSV(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => parseCatalogCSV(e.target.result);
+  reader.readAsText(file, 'UTF-8');
+}
+
+function parseCatalogCSV(text) {
+  const lines = text.trim().split('\n');
+  if (lines.length < 2) { setImportStatus('csv-import-status','CSV vacío o inválido','error'); return; }
+
+  const sep = lines[0].includes(';') ? ';' : ',';
+
+  // Parse CSV respecting quoted fields
+  function parseRow(line) {
+    const result = [];
+    let cur = '', inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (c === '"') { inQ = !inQ; }
+      else if (c === sep && !inQ) { result.push(cur.trim()); cur = ''; }
+      else { cur += c; }
+    }
+    result.push(cur.trim());
+    return result;
+  }
+
+  const headers = parseRow(lines[0]).map(h => h.replace(/^"|"$/g,'').trim());
+
+  // Auto-map Shopify CSV column names to internal fields
+  const colMap = {
+    title:    ['Title','title','Título','TITLE'],
+    desc:     ['Body (HTML)','Body','Description','body_html'],
+    vendor:   ['Vendor','vendor','Proveedor'],
+    type:     ['Type','type','Tipo'],
+    tags:     ['Tags','tags'],
+    price:    ['Variant Price','Price','price','Precio','variant_price'],
+    compare:  ['Variant Compare At Price','Compare At Price'],
+    image:    ['Image Src','image_src','Imagen','Image URL'],
+    sku:      ['Variant SKU','SKU','sku'],
+    handle:   ['Handle','handle'],
+    status:   ['Status','status','Published'],
+    weight:   ['Variant Grams'],
+    inventory:['Variant Inventory Qty']
+  };
+
+  function findCol(fieldCandidates) {
+    for (const c of fieldCandidates) {
+      const idx = headers.findIndex(h => h.toLowerCase() === c.toLowerCase());
+      if (idx !== -1) return idx;
+    }
+    return -1;
+  }
+
+  const idxTitle   = findCol(colMap.title);
+  const idxDesc    = findCol(colMap.desc);
+  const idxVendor  = findCol(colMap.vendor);
+  const idxType    = findCol(colMap.type);
+  const idxTags    = findCol(colMap.tags);
+  const idxPrice   = findCol(colMap.price);
+  const idxImage   = findCol(colMap.image);
+  const idxHandle  = findCol(colMap.handle);
+  const idxStatus  = findCol(colMap.status);
+
+  if (idxTitle === -1) {
+    setImportStatus('csv-import-status',
+      '❌ No se encontró columna "Title". Asegúrate de exportar desde Shopify Admin → Productos.', 'error');
+    return;
+  }
+
+  // Group rows by handle (Shopify repeats handle for each variant/image)
+  const grouped = {};
+  const order = [];
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    const row = parseRow(lines[i]);
+    const title   = idxTitle  !== -1 ? row[idxTitle]||'' : '';
+    const handle  = idxHandle !== -1 ? row[idxHandle]||'' : (title.toLowerCase().replace(/\s+/g,'-'));
+    if (!title && !handle) continue;
+
+    const key = handle || title;
+    if (!grouped[key]) {
+      grouped[key] = {
+        handle: key,
+        title: title || key,
+        desc: idxDesc  !== -1 ? row[idxDesc]||''  : '',
+        vendor: idxVendor !== -1 ? row[idxVendor]||'' : '',
+        type: idxType !== -1 ? row[idxType]||'' : '',
+        tags: idxTags !== -1 ? row[idxTags]||'' : '',
+        price: idxPrice !== -1 ? parseFloat(row[idxPrice])||0 : 0,
+        images: [],
+        published: idxStatus !== -1 ? row[idxStatus] : 'true'
+      };
+      order.push(key);
+    }
+    // Collect images (each row can have a different image)
+    if (idxImage !== -1 && row[idxImage] && row[idxImage].startsWith('http')) {
+      const src = row[idxImage];
+      if (!grouped[key].images.includes(src)) grouped[key].images.push(src);
+    }
+    // Use first non-empty price
+    if (grouped[key].price === 0 && idxPrice !== -1) {
+      const p = parseFloat(row[idxPrice])||0;
+      if (p > 0) grouped[key].price = p;
+    }
+    // Use first non-empty title if empty
+    if (!grouped[key].title && title) grouped[key].title = title;
+  }
+
+  _pendingImportItems = order.map(key => {
+    const g = grouped[key];
+    const isNew = !state.products.find(p=>p.handle===g.handle);
+    // Map Shopify Type → internal category
+    const catMap = {dress:'Vestidos',dresses:'Vestidos',top:'Tops',tops:'Tops',
+      pant:'Pantalones',pants:'Pantalones',trouser:'Pantalones',
+      shoe:'Zapatos',shoes:'Zapatos',footwear:'Zapatos',
+      bag:'Bolsos',bags:'Bolsos',purse:'Bolsos',
+      access:'Accesorios',jewel:'Accesorios',hat:'Accesorios'};
+    let category = 'Otros';
+    const typeL = (g.type||'').toLowerCase();
+    for (const [k,v] of Object.entries(catMap)) { if (typeL.includes(k)) { category = v; break; } }
+
+    return {
+      _source: 'csv',
+      handle: g.handle, title: g.title,
+      description: g.desc, supplier: g.vendor,
+      category, price: g.price, images: g.images,
+      cog: 0, status: g.published==='false'?'pausado':'activo',
+      notes: g.tags ? 'Tags: '+g.tags : '',
+      variants: [], url: '',
+      _isNew: isNew
+    };
+  });
+
+  if (!_pendingImportItems.length) {
+    setImportStatus('csv-import-status','No se encontraron productos válidos en el CSV.','error');
+    return;
+  }
+
+  setImportStatus('csv-import-status',
+    `✅ ${_pendingImportItems.length} productos detectados — ${_pendingImportItems.filter(p=>p._isNew).length} nuevos, ${_pendingImportItems.filter(p=>!p._isNew).length} actualizables. Columnas mapeadas: ${[idxTitle,idxPrice,idxImage,idxVendor,idxType].filter(i=>i!==-1).length}/5`,
+    'success');
+  openImportPreview('Importar desde CSV de Shopify', _pendingImportItems);
+}
+
+// --- Preview Modal ---
+function openImportPreview(title, items) {
+  document.getElementById('import-preview-title').textContent = title;
+  const newCount = items.filter(i=>i._isNew).length;
+  const updCount = items.length - newCount;
+  document.getElementById('preview-count').textContent = `${items.length} productos · ${newCount} nuevos · ${updCount} actualizables`;
+  document.getElementById('preview-summary').textContent = '';
+  document.getElementById('preview-select-all').checked = true;
+
+  const list = document.getElementById('preview-product-list');
+  list.innerHTML = items.map((item, idx) => {
+    const img = item.images && item.images[0] ? item.images[0] : '';
+    const badge = item._isNew
+      ? '<span class="preview-badge-new">NUEVO</span>'
+      : '<span class="preview-badge-update">ACTUALIZAR</span>';
+    return `<label class="preview-item" for="prev-chk-${idx}">
+      <input type="checkbox" id="prev-chk-${idx}" data-idx="${idx}" checked onchange="updatePreviewSummary()">
+      ${img
+        ? `<img src="${img}" alt="${item.title}" onerror="this.src=''" loading="lazy">`
+        : `<div style="width:48px;height:48px;background:var(--bg3);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">👗</div>`}
+      <div class="preview-item-info">
+        <h4>${item.title} ${badge}</h4>
+        <p>${fmtEur(item.price)} · ${item.supplier||'Sin proveedor'} · ${item.category}</p>
+      </div>
+    </label>`;
+  }).join('');
+
+  updatePreviewSummary();
+  document.getElementById('import-preview-modal').classList.add('open');
+}
+
+function toggleSelectAll(checked) {
+  document.querySelectorAll('#preview-product-list input[type=checkbox]')
+    .forEach(cb => cb.checked = checked);
+  updatePreviewSummary();
+}
+
+function updatePreviewSummary() {
+  const checked = document.querySelectorAll('#preview-product-list input[type=checkbox]:checked').length;
+  const total = document.querySelectorAll('#preview-product-list input[type=checkbox]').length;
+  document.getElementById('preview-summary').textContent = `${checked} de ${total} seleccionados`;
+  document.getElementById('preview-select-all').checked = checked === total;
+  document.getElementById('preview-select-all').indeterminate = checked > 0 && checked < total;
+}
+
+function confirmImport() {
+  const checkboxes = document.querySelectorAll('#preview-product-list input[type=checkbox]');
+  let added = 0, updated = 0;
+  checkboxes.forEach(cb => {
+    if (!cb.checked) return;
+    const idx = parseInt(cb.dataset.idx);
+    const item = _pendingImportItems[idx];
+    if (!item) return;
+
+    const existing = state.products.find(p => p.handle === item.handle);
+    if (existing) {
+      // Update only Shopify-sourced fields, preserve manual data
+      existing.title = item.title;
+      existing.price = item.price;
+      if (item.images && item.images.length) existing.images = item.images;
+      if (item.shopifyId) existing.shopifyId = item.shopifyId;
+      if (item.url) existing.url = item.url;
+      if (item.variants && item.variants.length) existing.variants = item.variants;
+      if (item.description) existing.description = item.description;
+      // Only update supplier if not manually set
+      if (!existing.supplier && item.supplier) existing.supplier = item.supplier;
+      updated++;
+    } else {
+      state.products.push({
+        id: uid(),
+        handle: item.handle,
+        title: item.title,
+        description: item.description||'',
+        price: item.price,
+        images: item.images||[],
+        variants: item.variants||[],
+        url: item.url||'',
+        shopifyId: item.shopifyId||null,
+        cog: 0,
+        category: item.category||'Otros',
+        supplier: item.supplier||'',
+        status: item.status||'activo',
+        notes: item.notes||''
+      });
+      added++;
+    }
+  });
+
+  state.lastSync = new Date().toISOString();
+  saveState();
+  closeModal('import-preview-modal');
+  renderCatalog();
+
+  // Collapse import panel after successful import
+  const body = document.getElementById('import-panel-body');
+  if (body.classList.contains('open')) toggleImportPanel();
+
+  alert(`✅ Importación completa\n${added} productos nuevos añadidos\n${updated} productos actualizados`);
+}
+
+// --- Sync: re-fetch from last used URL ---
+function syncProducts() {
+  if (state.lastImportUrl) {
+    const urlInput = document.getElementById('shopify-url-input');
+    if (urlInput) urlInput.value = state.lastImportUrl;
+    // Open import panel on URL tab
+    const body = document.getElementById('import-panel-body');
+    if (!body.classList.contains('open')) toggleImportPanel();
+    switchImportTab('url');
+    fetchByURL();
+  } else {
+    // No previous URL — just open the import panel
+    const body = document.getElementById('import-panel-body');
+    if (!body.classList.contains('open')) toggleImportPanel();
+    alert('Introduce la URL de tu tienda Shopify en el panel de importación.');
+  }
+}
 
 function editProduct(id) {
   const p = getProduct(id) || {};
@@ -1727,8 +2137,14 @@ function renderMonthlySummary() {
 // ============================================================
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('fin-month-select').value = currentMonth();
+  // Pre-fill last used Shopify URL if exists
+  if (state.lastImportUrl) {
+    const urlInput = document.getElementById('shopify-url-input');
+    if (urlInput) urlInput.value = state.lastImportUrl;
+  }
   renderDashboard();
   setupDragDrop();
+  setupCatalogCSVDrop();
 });
 </script>
 </body>
