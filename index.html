@@ -2308,6 +2308,35 @@ function renderTesting() {
     }).join('');
     const emptyDays = Array(Math.max(0,7-(c.days||[]).length)).fill(0).map(()=>'<td class="text-muted">—</td><td class="text-muted">—</td>').join('');
 
+    const noProdWarning = !prod ? `
+      <div style="padding:10px 16px;background:rgba(234,179,8,.12);border-top:1px solid rgba(234,179,8,.3);
+                  display:flex;align-items:center;gap:10px;font-size:13px;color:var(--yellow);">
+        <span style="font-size:16px;">⚠️</span>
+        <span><b>Sin producto vinculado</b> — el ROAS, margen y unidades no se pueden calcular.
+          <button class="btn btn-sm" style="margin-left:8px;background:rgba(234,179,8,.2);color:var(--yellow);border:1px solid rgba(234,179,8,.4);"
+            onclick="openCreativeModal('${c.id}')">Vincular producto</button>
+        </span>
+      </div>` : '';
+
+    const infoBar = prod
+      ? `<div style="padding:12px 16px;background:var(--bg3);display:flex;flex-wrap:wrap;gap:24px;font-size:13px;">
+          <span>Producto: <b>${prod.title}</b></span>
+          <span>Precio: <b>${fmtEur(price)}</b></span>
+          <span>COG: <b>${fmtEur(cog)}</b></span>
+          <span>Margen€: <b class="${marginEur>=0?'text-green':'text-red'}">${fmtEur(marginEur)}</b></span>
+          <span>Margen%: <b>${fmtPct(marginPct)}</b></span>
+          <span>Unidades: <b>${units}</b></span>
+          <span>COG Total: <b>${fmtEur(totalCOG)}</b></span>
+          <span>Store Value: <b>${fmtEur(storeValue)}</b></span>
+          <span>ROAS Total: <b class="${roasClass2}">${fmt(totalRoas)}</b></span>
+          <span>Gasto Total: <b>${fmtEur(totalSpend)}</b></span>
+        </div>`
+      : `<div style="padding:12px 16px;background:var(--bg3);display:flex;flex-wrap:wrap;gap:24px;font-size:13px;">
+          <span>ROAS Total: <b class="${roasClass2}">${fmt(totalRoas)}</b></span>
+          <span>Gasto Total: <b>${fmtEur(totalSpend)}</b></span>
+          <span>Ingresos: <b>${fmtEur(totalRev)}</b></span>
+        </div>`;
+
     return `<div class="table-wrap mb24">
       <div class="table-header flex-between">
         <div class="flex">
@@ -2316,24 +2345,15 @@ function renderTesting() {
           <span class="badge badge-gray" style="margin-left:4px;">${c.platform||''}</span>
           <span class="badge badge-gray">${c.format||''}</span>
           ${statusBadge(c.status)}
+          ${!prod ? '<span class="badge badge-yellow" style="margin-left:4px;">Sin producto</span>' : ''}
         </div>
         <div class="flex">
           <button class="btn btn-secondary btn-sm" onclick="openCreativeModal('${c.id}')">✏️ Editar</button>
           <button class="btn btn-danger btn-sm" onclick="deleteCreative('${c.id}')">🗑</button>
         </div>
       </div>
-      <div style="padding:12px 16px;background:var(--bg3);display:flex;flex-wrap:wrap;gap:24px;font-size:13px;">
-        <span>Producto: <b>${prod?prod.title:'—'}</b></span>
-        <span>Precio: <b>${fmtEur(price)}</b></span>
-        <span>COG: <b>${fmtEur(cog)}</b></span>
-        <span>Margen€: <b class="${marginEur>=0?'text-green':'text-red'}">${fmtEur(marginEur)}</b></span>
-        <span>Margen%: <b>${fmtPct(marginPct)}</b></span>
-        <span>Unidades: <b>${units}</b></span>
-        <span>COG Total: <b>${fmtEur(totalCOG)}</b></span>
-        <span>Store Value: <b>${fmtEur(storeValue)}</b></span>
-        <span>ROAS Total: <b class="${roasClass2}">${fmt(totalRoas)}</b></span>
-        <span>Gasto Total: <b>${fmtEur(totalSpend)}</b></span>
-      </div>
+      ${noProdWarning}
+      ${infoBar}
       <div style="overflow-x:auto;">
         <table>
           <thead><tr>
