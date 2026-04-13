@@ -193,6 +193,53 @@ select option{background:var(--bg3);}
 .search-row input{flex:1;min-width:200px;}
 .search-row select{min-width:140px;}
 
+/* AUTH SCREEN */
+#auth-screen{position:fixed;inset:0;background:var(--bg);z-index:2000;display:flex;align-items:center;justify-content:center;flex-direction:column;}
+#auth-screen.hidden{display:none;}
+.auth-box{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:40px;width:100%;max-width:420px;box-shadow:0 24px 64px rgba(0,0,0,.5);}
+.auth-logo{text-align:center;margin-bottom:32px;}
+.auth-logo h1{font-size:22px;font-weight:800;color:var(--accent2);letter-spacing:1px;}
+.auth-logo p{font-size:13px;color:var(--text2);margin-top:4px;}
+.auth-tabs{display:flex;gap:0;background:var(--bg3);border-radius:8px;padding:4px;margin-bottom:28px;}
+.auth-tab{flex:1;padding:8px;text-align:center;border-radius:6px;cursor:pointer;font-size:13px;color:var(--text2);transition:.2s;font-weight:500;}
+.auth-tab.active{background:var(--accent);color:#fff;}
+.auth-form{display:none;}
+.auth-form.active{display:block;}
+.auth-form .form-group{margin-bottom:14px;}
+.auth-form .form-group label{display:block;font-size:12px;color:var(--text2);margin-bottom:5px;}
+.auth-form .form-group input{width:100%;}
+.auth-submit{width:100%;padding:11px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;margin-top:8px;transition:.2s;}
+.auth-submit:hover{background:var(--accent2);}
+.auth-error{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:var(--red);border-radius:7px;padding:10px 12px;font-size:13px;margin-bottom:12px;display:none;}
+.auth-error.show{display:block;}
+.auth-success{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:var(--green);border-radius:7px;padding:10px 12px;font-size:13px;margin-bottom:12px;display:none;}
+.auth-success.show{display:block;}
+.auth-divider{text-align:center;color:var(--text2);font-size:12px;margin:16px 0;position:relative;}
+.auth-divider::before,.auth-divider::after{content:'';position:absolute;top:50%;width:40%;height:1px;background:var(--border);}
+.auth-divider::before{left:0;}.auth-divider::after{right:0;}
+
+/* HAMBURGER / USER MENU */
+.sidebar-user{padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer;position:relative;transition:.2s;}
+.sidebar-user:hover{background:var(--bg3);}
+.sidebar-user-row{display:flex;align-items:center;gap:10px;}
+.sidebar-avatar{width:32px;height:32px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;}
+.sidebar-user-info{flex:1;min-width:0;}
+.sidebar-user-info .uname{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sidebar-user-info .uemail{font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sidebar-hamburger{color:var(--text2);font-size:16px;flex-shrink:0;}
+.user-dropdown{position:absolute;top:calc(100% + 4px);left:8px;right:8px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,.4);z-index:500;display:none;overflow:hidden;}
+.user-dropdown.open{display:block;}
+.user-dropdown-item{display:flex;align-items:center;gap:10px;padding:11px 14px;cursor:pointer;font-size:13px;color:var(--text2);transition:.2s;}
+.user-dropdown-item:hover{background:var(--bg3);color:var(--text);}
+.user-dropdown-item .icon{width:18px;text-align:center;}
+.user-dropdown-sep{height:1px;background:var(--border);margin:4px 0;}
+.user-dropdown-item.danger:hover{color:var(--red);}
+
+/* SETTINGS MODAL */
+.settings-section{margin-bottom:24px;}
+.settings-section h4{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+.pw-strength{height:3px;border-radius:2px;margin-top:6px;transition:.3s;}
+
 /* SALES SECTION */
 .sales-breakdown{background:var(--bg3);border-radius:8px;padding:12px 14px;margin-top:16px;}
 .sales-breakdown h4{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin-bottom:10px;}
@@ -240,11 +287,98 @@ select option{background:var(--bg3);}
 </head>
 <body>
 
+<!-- ===== AUTH SCREEN ===== -->
+<div id="auth-screen">
+  <div class="auth-box">
+    <div class="auth-logo">
+      <h1>CC Control</h1>
+      <p>Panel de control para tu tienda Shopify</p>
+    </div>
+    <div class="auth-tabs">
+      <div class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">Iniciar sesión</div>
+      <div class="auth-tab" id="tab-register" onclick="switchAuthTab('register')">Registrarse</div>
+    </div>
+
+    <!-- LOGIN -->
+    <div class="auth-form active" id="form-login">
+      <div class="auth-error" id="login-error"></div>
+      <div class="form-group"><label>Email</label><input type="email" id="login-email" placeholder="tu@email.com" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <div class="form-group"><label>Contraseña</label><input type="password" id="login-pwd" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <button class="auth-submit" onclick="doLogin()">Entrar</button>
+    </div>
+
+    <!-- REGISTER -->
+    <div class="auth-form" id="form-register">
+      <div class="auth-error" id="register-error"></div>
+      <div class="auth-success" id="register-success"></div>
+      <div class="form-group"><label>Nombre</label><input type="text" id="reg-name" placeholder="Tu nombre"></div>
+      <div class="form-group"><label>Email</label><input type="email" id="reg-email" placeholder="tu@email.com"></div>
+      <div class="form-group">
+        <label>Contraseña</label>
+        <input type="password" id="reg-pwd" placeholder="Mínimo 6 caracteres" oninput="checkPwStrength(this.value)">
+        <div class="pw-strength" id="pw-strength-bar" style="background:var(--border);width:0%;"></div>
+      </div>
+      <div class="form-group"><label>Confirmar contraseña</label><input type="password" id="reg-pwd2" placeholder="Repite la contraseña"></div>
+      <button class="auth-submit" onclick="doRegister()">Crear cuenta</button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings Modal -->
+<div class="modal-overlay" id="settings-modal">
+  <div class="modal" style="max-width:500px;">
+    <div class="modal-header">
+      <h3>Configuración</h3>
+      <button class="close-btn" onclick="closeModal('settings-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="settings-section">
+        <h4>Mi perfil</h4>
+        <div class="form-group mb8"><label>Nombre</label><input type="text" id="cfg-name" placeholder="Tu nombre"></div>
+        <div class="form-group mb8"><label>Email</label><input type="email" id="cfg-email" placeholder="tu@email.com"></div>
+        <button class="btn btn-primary btn-sm" onclick="saveProfile()">Guardar perfil</button>
+      </div>
+      <div class="settings-section">
+        <h4>Cambiar contraseña</h4>
+        <div class="form-group mb8"><label>Contraseña actual</label><input type="password" id="cfg-pwd-old" placeholder="••••••••"></div>
+        <div class="form-group mb8"><label>Nueva contraseña</label><input type="password" id="cfg-pwd-new" placeholder="Mínimo 6 caracteres"></div>
+        <div class="form-group mb8"><label>Confirmar nueva</label><input type="password" id="cfg-pwd-new2" placeholder="Repite la nueva contraseña"></div>
+        <div class="auth-error" id="cfg-pwd-error"></div>
+        <button class="btn btn-primary btn-sm" onclick="savePassword()">Cambiar contraseña</button>
+      </div>
+      <div class="settings-section">
+        <h4>Tienda Shopify</h4>
+        <div class="form-group mb8">
+          <label>URL de tu tienda (guardada para importaciones)</label>
+          <input type="text" id="cfg-shopify-url" placeholder="https://sutienda.myshopify.com">
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="saveShopifyUrl()">Guardar URL</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('settings-modal')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <!-- SIDEBAR -->
 <nav id="sidebar">
-  <div class="sidebar-logo">
-    <h2>CC Control</h2>
-    <p>Catalina Castellanos</p>
+  <!-- USER MENU -->
+  <div class="sidebar-user" onclick="toggleUserMenu(event)">
+    <div class="sidebar-user-row">
+      <div class="sidebar-avatar" id="sidebar-avatar">?</div>
+      <div class="sidebar-user-info">
+        <div class="uname" id="sidebar-uname">Cargando…</div>
+        <div class="uemail" id="sidebar-uemail"></div>
+      </div>
+      <div class="sidebar-hamburger">☰</div>
+    </div>
+    <div class="user-dropdown" id="user-dropdown">
+      <div class="user-dropdown-item" onclick="openSettings()"><span class="icon">👤</span> Mi cuenta</div>
+      <div class="user-dropdown-item" onclick="openSettings()"><span class="icon">⚙️</span> Configuración</div>
+      <div class="user-dropdown-sep"></div>
+      <div class="user-dropdown-item danger" onclick="doLogout()"><span class="icon">🚪</span> Cerrar sesión</div>
+    </div>
   </div>
   <div class="nav-menu">
     <div class="nav-item active" onclick="showModule('dashboard')">
@@ -263,7 +397,7 @@ select option{background:var(--bg3);}
       <span class="icon">💰</span><span>Finanzas</span>
     </div>
   </div>
-  <div class="sidebar-footer">v1.0 · localStorage</div>
+  <div class="sidebar-footer">v1.0 · CC Control</div>
 </nav>
 
 <!-- MAIN CONTENT -->
@@ -819,12 +953,225 @@ select option{background:var(--bg3);}
 
 <script>
 // ============================================================
-// STATE & STORAGE
+// AUTH SYSTEM
 // ============================================================
-const APP_KEY = 'cc_control_v1';
+const AUTH_KEY  = 'cc_auth_v1';
+const DATA_PRE  = 'cc_data_';
+const LEGACY_KEY = 'cc_control_v1';
 
+/* Simple deterministic hash (client-side only, for localStorage auth) */
+function hashPwd(email, pwd) {
+  const raw = 'cc2024::' + email.toLowerCase() + '::' + pwd;
+  let h = 5381;
+  for (let i = 0; i < raw.length; i++) h = ((h << 5) + h) ^ raw.charCodeAt(i);
+  return (h >>> 0).toString(36);
+}
+
+function getAuthStore() {
+  try { return JSON.parse(localStorage.getItem(AUTH_KEY)) || {users:[], session:null}; }
+  catch(e) { return {users:[], session:null}; }
+}
+function saveAuthStore(a) { localStorage.setItem(AUTH_KEY, JSON.stringify(a)); }
+
+function currentUser() {
+  const a = getAuthStore();
+  if (!a.session) return null;
+  return a.users.find(u => u.id === a.session.userId) || null;
+}
+
+function userDataKey(userId) { return DATA_PRE + userId; }
+
+/* ---------- Login / Register / Logout ---------- */
+function doLogin() {
+  const email = (document.getElementById('login-email').value||'').trim().toLowerCase();
+  const pwd   = document.getElementById('login-pwd').value;
+  const errEl = document.getElementById('login-error');
+  errEl.classList.remove('show');
+
+  if (!email || !pwd) { showAuthErr('login-error','Completa todos los campos'); return; }
+  const a = getAuthStore();
+  const user = a.users.find(u => u.email === email && u.pwHash === hashPwd(email,pwd));
+  if (!user) { showAuthErr('login-error','Email o contraseña incorrectos'); return; }
+
+  a.session = { userId: user.id };
+  saveAuthStore(a);
+  bootApp();
+}
+
+function doRegister() {
+  const name  = (document.getElementById('reg-name').value||'').trim();
+  const email = (document.getElementById('reg-email').value||'').trim().toLowerCase();
+  const pwd   = document.getElementById('reg-pwd').value;
+  const pwd2  = document.getElementById('reg-pwd2').value;
+
+  document.getElementById('register-error').classList.remove('show');
+  document.getElementById('register-success').classList.remove('show');
+
+  if (!name||!email||!pwd) { showAuthErr('register-error','Completa todos los campos'); return; }
+  if (pwd.length < 6)      { showAuthErr('register-error','La contraseña debe tener al menos 6 caracteres'); return; }
+  if (pwd !== pwd2)        { showAuthErr('register-error','Las contraseñas no coinciden'); return; }
+
+  const a = getAuthStore();
+  if (a.users.find(u=>u.email===email)) { showAuthErr('register-error','Ya existe una cuenta con ese email'); return; }
+
+  const user = { id: uid(), name, email, pwHash: hashPwd(email,pwd), createdAt: Date.now(), shopifyUrl: '' };
+  a.users.push(user);
+  a.session = { userId: user.id };
+  saveAuthStore(a);
+
+  const succEl = document.getElementById('register-success');
+  succEl.textContent = '✅ Cuenta creada. Entrando…';
+  succEl.classList.add('show');
+  setTimeout(bootApp, 800);
+}
+
+function doLogout() {
+  const a = getAuthStore();
+  a.session = null;
+  saveAuthStore(a);
+  // Reload to clean state
+  location.reload();
+}
+
+function showAuthErr(elId, msg) {
+  const el = document.getElementById(elId);
+  el.textContent = msg;
+  el.classList.add('show');
+}
+
+function switchAuthTab(tab) {
+  ['login','register'].forEach(t => {
+    document.getElementById('tab-'+t).classList.toggle('active', t===tab);
+    document.getElementById('form-'+t).classList.toggle('active', t===tab);
+  });
+  document.getElementById('login-error').classList.remove('show');
+  document.getElementById('register-error').classList.remove('show');
+}
+
+function checkPwStrength(pwd) {
+  const bar = document.getElementById('pw-strength-bar');
+  if (!bar) return;
+  const score = [pwd.length>=6, /[A-Z]/.test(pwd), /[0-9]/.test(pwd), /[^A-Za-z0-9]/.test(pwd)].filter(Boolean).length;
+  const colors = ['','#ef4444','#f97316','#eab308','#22c55e'];
+  bar.style.width = (score*25)+'%';
+  bar.style.background = colors[score] || 'var(--border)';
+}
+
+/* ---------- User Menu ---------- */
+function toggleUserMenu(e) {
+  e.stopPropagation();
+  document.getElementById('user-dropdown').classList.toggle('open');
+}
+document.addEventListener('click', () => {
+  document.getElementById('user-dropdown')?.classList.remove('open');
+});
+
+function updateSidebarUser() {
+  const u = currentUser();
+  if (!u) return;
+  const initial = u.name.charAt(0).toUpperCase();
+  document.getElementById('sidebar-avatar').textContent = initial;
+  document.getElementById('sidebar-uname').textContent = u.name;
+  document.getElementById('sidebar-uemail').textContent = u.email;
+}
+
+/* ---------- Settings ---------- */
+function openSettings() {
+  document.getElementById('user-dropdown').classList.remove('open');
+  const u = currentUser();
+  if (!u) return;
+  document.getElementById('cfg-name').value  = u.name;
+  document.getElementById('cfg-email').value = u.email;
+  document.getElementById('cfg-shopify-url').value = u.shopifyUrl || '';
+  document.getElementById('cfg-pwd-old').value  = '';
+  document.getElementById('cfg-pwd-new').value  = '';
+  document.getElementById('cfg-pwd-new2').value = '';
+  document.getElementById('cfg-pwd-error').classList.remove('show');
+  document.getElementById('settings-modal').classList.add('open');
+}
+
+function saveProfile() {
+  const name  = (document.getElementById('cfg-name').value||'').trim();
+  const email = (document.getElementById('cfg-email').value||'').trim().toLowerCase();
+  if (!name||!email) { alert('Completa nombre y email'); return; }
+  const a = getAuthStore();
+  const u = a.users.find(x=>x.id===a.session.userId);
+  if (!u) return;
+  // Check email not taken by another user
+  if (a.users.some(x=>x.email===email&&x.id!==u.id)) { alert('Ese email ya lo usa otra cuenta'); return; }
+  u.name  = name;
+  u.email = email;
+  saveAuthStore(a);
+  updateSidebarUser();
+  alert('✅ Perfil actualizado');
+}
+
+function savePassword() {
+  const oldPwd  = document.getElementById('cfg-pwd-old').value;
+  const newPwd  = document.getElementById('cfg-pwd-new').value;
+  const newPwd2 = document.getElementById('cfg-pwd-new2').value;
+  const errEl   = document.getElementById('cfg-pwd-error');
+  errEl.classList.remove('show');
+
+  const a = getAuthStore();
+  const u = a.users.find(x=>x.id===a.session.userId);
+  if (!u) return;
+
+  if (u.pwHash !== hashPwd(u.email, oldPwd)) { showAuthErr('cfg-pwd-error','Contraseña actual incorrecta'); return; }
+  if (newPwd.length < 6)  { showAuthErr('cfg-pwd-error','La nueva contraseña debe tener al menos 6 caracteres'); return; }
+  if (newPwd !== newPwd2) { showAuthErr('cfg-pwd-error','Las contraseñas no coinciden'); return; }
+
+  u.pwHash = hashPwd(u.email, newPwd);
+  saveAuthStore(a);
+  document.getElementById('cfg-pwd-old').value  = '';
+  document.getElementById('cfg-pwd-new').value  = '';
+  document.getElementById('cfg-pwd-new2').value = '';
+  alert('✅ Contraseña cambiada');
+}
+
+function saveShopifyUrl() {
+  const url = (document.getElementById('cfg-shopify-url').value||'').trim();
+  const a = getAuthStore();
+  const u = a.users.find(x=>x.id===a.session.userId);
+  if (!u) return;
+  u.shopifyUrl = url;
+  saveAuthStore(a);
+  // Also update the import URL field if visible
+  const urlInput = document.getElementById('shopify-url-input');
+  if (urlInput && url) urlInput.value = url;
+  state.lastImportUrl = url;
+  saveState();
+  alert('✅ URL de tienda guardada');
+}
+
+/* ---------- Boot / Auth check ---------- */
+function bootApp() {
+  const u = currentUser();
+  if (!u) {
+    document.getElementById('auth-screen').classList.remove('hidden');
+    return;
+  }
+  document.getElementById('auth-screen').classList.add('hidden');
+  // Reload per-user state
+  state = loadState();
+  updateSidebarUser();
+  // Pre-fill Shopify URL from profile
+  const urlInput = document.getElementById('shopify-url-input');
+  if (urlInput && u.shopifyUrl) urlInput.value = u.shopifyUrl;
+  if (state.lastImportUrl && urlInput && !urlInput.value) urlInput.value = state.lastImportUrl;
+  document.getElementById('fin-month-select').value = currentMonth();
+  renderDashboard();
+  setupDragDrop();
+  setupCatalogCSVDrop();
+}
+
+// ============================================================
+// STATE & STORAGE  (per-user)
+// ============================================================
 function loadState() {
-  try { return JSON.parse(localStorage.getItem(APP_KEY)) || defaultState(); }
+  const u = currentUser();
+  const key = u ? userDataKey(u.id) : LEGACY_KEY;
+  try { return JSON.parse(localStorage.getItem(key)) || defaultState(); }
   catch(e) { return defaultState(); }
 }
 
@@ -836,25 +1183,22 @@ function defaultState() {
     returns: [],
     finance: {
       daily: {},
-      fixedCosts: {
-        team: 0, apps: 0, chatgpt: 0, creatives: 0, banking: 0, custom: []
-      },
-      liquidity: {
-        wise: 0, bank: 0, shopify: 0, cash: 0,
-        paypal: 0, klarna: 0, stripe: 0,
-        pendingInvoices: 0, debts: 0
-      }
+      fixedCosts: { team:0, apps:0, chatgpt:0, creatives:0, banking:0, custom:[] },
+      liquidity: { wise:0, bank:0, shopify:0, cash:0, paypal:0, klarna:0, stripe:0, pendingInvoices:0, debts:0 }
     },
     csvData: [],
-    lastSync: null
+    lastSync: null,
+    lastImportUrl: null
   };
 }
 
 function saveState() {
-  localStorage.setItem(APP_KEY, JSON.stringify(state));
+  const u = currentUser();
+  const key = u ? userDataKey(u.id) : LEGACY_KEY;
+  localStorage.setItem(key, JSON.stringify(state));
 }
 
-let state = loadState();
+let state = defaultState(); // will be loaded after auth check
 
 // ============================================================
 // NAVIGATION
@@ -2422,15 +2766,7 @@ function renderMonthlySummary() {
 // INIT
 // ============================================================
 document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('fin-month-select').value = currentMonth();
-  // Pre-fill last used Shopify URL if exists
-  if (state.lastImportUrl) {
-    const urlInput = document.getElementById('shopify-url-input');
-    if (urlInput) urlInput.value = state.lastImportUrl;
-  }
-  renderDashboard();
-  setupDragDrop();
-  setupCatalogCSVDrop();
+  bootApp();
 });
 </script>
 </body>
