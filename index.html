@@ -1263,13 +1263,12 @@ function syncFinanceFromSales() {
   });
 
   // Step 3 — creative days: day 0 = launch date, day i = launch + i days
-  // Each creative day contributes: revenue → autoRev, COGS → autoCogs,
-  // units → autoOrders, ad spend → autoAdSpend
+  // Spend/revenue always flow even if no product is linked (COG defaults to 0)
   state.creatives.forEach(c => {
+    if (!c.date) return;
     const prod  = getProduct(c.productId);
-    if (!prod || !c.date) return;
-    const price = +prod.price || 0;
-    const cog   = +prod.cog   || 0;
+    const price = prod ? (+prod.price||0) : 0;
+    const cog   = prod ? (+prod.cog||0)   : 0;
     (c.days || []).forEach((day, i) => {
       const rev   = +day.revenue || 0;
       const spend = +day.spend   || 0;
@@ -1283,14 +1282,14 @@ function syncFinanceFromSales() {
   });
 
   // Step 4 — campaigns: totalRevenue + budget attributed to startDate (or today)
+  // Revenue/spend always flow even if no product is linked (COG defaults to 0)
   state.campaigns.forEach(c => {
-    const prod = getProduct(c.productId);
-    if (!prod) return;
-    const rev    = +c.totalRevenue || 0;
-    const spend  = +c.budget       || 0;
+    const rev   = +c.totalRevenue || 0;
+    const spend = +c.budget       || 0;
     if (rev <= 0 && spend <= 0) return;
-    const price   = +prod.price || 0;
-    const cog     = +prod.cog   || 0;
+    const prod    = getProduct(c.productId);
+    const price   = prod ? (+prod.price||0) : 0;
+    const cog     = prod ? (+prod.cog||0)   : 0;
     const units   = calcUnitsFromRev(rev, price);
     const dateStr = c.startDate || today();
     addToDay(dateStr, rev, units * cog, units, spend);
@@ -1392,14 +1391,55 @@ function renderDashboard() {
     now.toLocaleDateString('es-ES', {weekday:'long',year:'numeric',month:'long',day:'numeric'});
 
   const ym = currentMonth();
-  const days = Object.values(state.finance.daily[ym] || {});
 
-  const totalRev    = days.reduce((s,d)=>s+(+d.rev||0)+(+d.autoRev||0),0);
-  const totalAds    = days.reduce((s,d)=>s+(+d.adSpend||0)+(+d.autoAdSpend||0),0);
-  const totalCogs   = days.reduce((s,d)=>s+(+d.cogs||0)+(+d.autoCogs||0),0);
-  const totalCF     = getDailyFixedCost() * days.length;
-  const totalProfit = days.reduce((s,d)=>s+calcDayProfit(d),0);
-  const totalOrders = days.reduce((s,d)=>s+(+d.orders||0)+(+d.autoOrders||0),0);
+  // ── 1. Creative totals (all creatives, read directly — no finance.daily dependency)
+  const creativeRev    = state.creatives.reduce((s,c) => s + calcCreativeRevenue(c), 0);
+  const creativeSpend  = state.creatives.reduce((s,c) => s + calcCreativeSpend(c),   0);
+  const creativeUnits  = state.creatives.reduce((s,c) => s + calcCreativeUnits(c),   0);
+  const creativeCogs   = state.creatives.reduce((s,c) => {
+    const p = getProduct(c.productId);
+    return s + calcCreativeUnits(c) * (p ? (+p.cog||0) : 0);
+  }, 0);
+
+  // ── 2. Campaign totals (read directly)
+  const campaignRev   = state.campaigns.reduce((s,c) => s + (+c.totalRevenue||0), 0);
+  const campaignSpend = state.campaigns.reduce((s,c) => s + (+c.budget||0), 0);
+  const campaignUnits = state.campaigns.reduce((s,c) => {
+    const p = getProduct(c.productId);
+    return s + calcUnitsFromRev(+c.totalRevenue||0, p ? (+p.price||0) : 0);
+  }, 0);
+  const campaignCogs  = state.campaigns.reduce((s,c) => {
+    const p = getProduct(c.productId);
+    const u = calcUnitsFromRev(+c.totalRevenue||0, p ? (+p.price||0) : 0);
+    return s + u * (p ? (+p.cog||0) : 0);
+  }, 0);
+
+  // ── 3. Manual product sales (all products, read directly)
+  const manualSalesRev = state.products.reduce((s,p) => {
+    return s + (p.manualSales||[]).reduce((ss,e) => ss + (+e.units||0)*(+p.price||0), 0);
+  }, 0);
+  const manualSalesCogs = state.products.reduce((s,p) => {
+    return s + (p.manualSales||[]).reduce((ss,e) => ss + (+e.units||0)*(+p.cog||0), 0);
+  }, 0);
+  const manualSalesOrders = state.products.reduce((s,p) => {
+    return s + (p.manualSales||[]).reduce((ss,e) => ss + (+e.units||0), 0);
+  }, 0);
+
+  // ── 4. Manual daily finance entries for current month (manual fields only — auto already counted above)
+  const days = Object.values(state.finance.daily[ym] || {});
+  const manualDayRev    = days.reduce((s,d) => s + (+d.rev||0), 0);
+  const manualDayAds    = days.reduce((s,d) => s + (+d.adSpend||0), 0);
+  const manualDayCogs   = days.reduce((s,d) => s + (+d.cogs||0), 0);
+  const manualDayOrders = days.reduce((s,d) => s + (+d.orders||0), 0);
+
+  // ── Combined totals
+  const totalRev    = creativeRev  + campaignRev  + manualSalesRev  + manualDayRev;
+  const totalAds    = creativeSpend + campaignSpend + manualDayAds;
+  const totalCogs   = creativeCogs + campaignCogs + manualSalesCogs + manualDayCogs;
+  const totalOrders = creativeUnits + campaignUnits + manualSalesOrders + manualDayOrders;
+  const totalCF     = getDailyFixedCost() * new Date().getDate(); // days elapsed this month
+  const com3        = totalRev * 0.03;
+  const totalProfit = totalRev - totalCogs - totalAds - com3 - totalCF;
   const roas = totalAds > 0 ? totalRev / totalAds : 0;
   const activeProducts = state.products.filter(p=>p.status==='activo').length;
   const testCreatives = state.creatives.filter(c=>c.status==='en test').length;
@@ -1451,7 +1491,7 @@ function renderDashboard() {
   });
 
   // Expense donut
-  const expData = [totalAds, totalCogs, totalCF, Math.max(0,totalProfit)];
+  const expData = [totalAds, totalCogs, totalCF, Math.max(0, totalProfit)];
   if (expenseChartInst) expenseChartInst.destroy();
   const ctx2 = document.getElementById('expenseChart').getContext('2d');
   expenseChartInst = new Chart(ctx2, {
