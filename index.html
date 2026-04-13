@@ -193,6 +193,19 @@ select option{background:var(--bg3);}
 .search-row input{flex:1;min-width:200px;}
 .search-row select{min-width:140px;}
 
+/* SALES SECTION */
+.sales-breakdown{background:var(--bg3);border-radius:8px;padding:12px 14px;margin-top:16px;}
+.sales-breakdown h4{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin-bottom:10px;}
+.sales-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:13px;}
+.sales-row:last-child{border-bottom:none;}
+.sales-row.total-sales{font-weight:700;color:var(--accent2);font-size:14px;padding-top:8px;}
+.manual-sale-item{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px;}
+.manual-sale-item:last-child{border-bottom:none;}
+.product-sales-badge{display:inline-flex;align-items:center;gap:4px;background:rgba(99,102,241,.15);color:var(--accent2);padding:2px 7px;border-radius:10px;font-size:11px;font-weight:600;}
+.product-profit-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:10px;font-size:11px;font-weight:600;}
+.product-profit-pos{background:rgba(34,197,94,.15);color:var(--green);}
+.product-profit-neg{background:rgba(239,68,68,.15);color:var(--red);}
+
 /* IMPORT PANEL */
 .import-panel{background:var(--bg2);border:1px solid var(--border);border-radius:10px;margin-bottom:20px;overflow:hidden;}
 .import-panel-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;}
@@ -273,14 +286,21 @@ select option{background:var(--bg3);}
         <div class="chart-container"><canvas id="expenseChart"></canvas></div>
       </div>
     </div>
-    <div class="table-wrap">
-      <div class="table-header">
-        <h3>Productos Más Rentables</h3>
+    <div class="section-row">
+      <div class="table-wrap" style="margin-bottom:0;">
+        <div class="table-header"><h3>🏆 Productos Más Vendidos</h3></div>
+        <table>
+          <thead><tr><th>Producto</th><th>Uds.</th><th>Ingresos</th><th>Profit</th><th>Fuente</th></tr></thead>
+          <tbody id="dash-topsellers-table"></tbody>
+        </table>
       </div>
-      <table>
-        <thead><tr><th>Producto</th><th>Precio</th><th>COG</th><th>Margen €</th><th>Margen %</th><th>Estado</th></tr></thead>
-        <tbody id="dash-products-table"></tbody>
-      </table>
+      <div class="table-wrap" style="margin-bottom:0;">
+        <div class="table-header"><h3>💎 Productos Más Rentables</h3></div>
+        <table>
+          <thead><tr><th>Producto</th><th>Precio</th><th>COG</th><th>Margen€</th><th>Margen%</th><th>Ventas</th></tr></thead>
+          <tbody id="dash-products-table"></tbody>
+        </table>
+      </div>
     </div>
     <div class="table-wrap">
       <div class="table-header"><h3>Creativos en Test Activos</h3></div>
@@ -346,14 +366,17 @@ select option{background:var(--bg3);}
       <input type="text" id="cat-search" placeholder="Buscar productos..." oninput="renderCatalog()">
       <select id="cat-filter-cat" onchange="renderCatalog()">
         <option value="">Todas las categorías</option>
-        <option>Vestidos</option><option>Tops</option><option>Pantalones</option>
-        <option>Accesorios</option><option>Zapatos</option><option>Bolsos</option><option>Otros</option>
       </select>
       <select id="cat-filter-status" onchange="renderCatalog()">
         <option value="">Todos los estados</option>
         <option value="activo">Activo</option>
         <option value="pausado">Pausado</option>
         <option value="descatalogado">Descatalogado</option>
+      </select>
+      <select id="cat-filter-sales" onchange="renderCatalog()">
+        <option value="">Todas las ventas</option>
+        <option value="con-ventas">Con ventas</option>
+        <option value="sin-ventas">Sin ventas</option>
       </select>
     </div>
     <div id="catalog-grid" class="products-grid"></div>
@@ -570,7 +593,7 @@ select option{background:var(--bg3);}
 
 <!-- Product Modal -->
 <div class="modal-overlay" id="product-modal">
-  <div class="modal">
+  <div class="modal" style="max-width:680px;">
     <div class="modal-header">
       <h3 id="product-modal-title">Editar Producto</h3>
       <button class="close-btn" onclick="closeModal('product-modal')">✕</button>
@@ -600,10 +623,8 @@ select option{background:var(--bg3);}
         </div>
         <div class="form-group">
           <label>Categoría</label>
-          <select id="pm-category">
-            <option>Vestidos</option><option>Tops</option><option>Pantalones</option>
-            <option>Accesorios</option><option>Zapatos</option><option>Bolsos</option><option>Otros</option>
-          </select>
+          <input type="text" id="pm-category" placeholder="ej: Vestidos, Tops…" list="pm-category-list">
+          <datalist id="pm-category-list"></datalist>
         </div>
         <div class="form-group">
           <label>Proveedor</label>
@@ -621,6 +642,42 @@ select option{background:var(--bg3);}
           <label>Notas</label>
           <textarea id="pm-notes" rows="2" placeholder="Notas adicionales..."></textarea>
         </div>
+      </div>
+
+      <!-- SALES SECTION -->
+      <div class="sales-breakdown mt16" id="pm-sales-section">
+        <h4>Control de Ventas</h4>
+        <div class="sales-row"><span class="text-muted">Ventas de Creativos</span><span id="pm-sales-creatives">0 uds.</span></div>
+        <div class="sales-row"><span class="text-muted">Ventas de Campañas</span><span id="pm-sales-campaigns">0 uds.</span></div>
+        <div class="sales-row"><span class="text-muted">Ventas Manuales</span><span id="pm-sales-manual-total">0 uds.</span></div>
+        <div class="sales-row total-sales"><span>Total Ventas</span><span id="pm-sales-total">0 uds.</span></div>
+        <div class="sales-row"><span class="text-muted">Ingresos Totales</span><span id="pm-sales-revenue" class="text-green">€0</span></div>
+        <div class="sales-row"><span class="text-muted">COG Total</span><span id="pm-sales-cog-total" class="text-red">€0</span></div>
+        <div class="sales-row"><span class="text-muted">Beneficio Neto</span><span id="pm-sales-profit">€0</span></div>
+      </div>
+
+      <!-- MANUAL SALES -->
+      <div class="form-panel mt16" style="margin-bottom:0;">
+        <h3 style="margin-bottom:12px;">Añadir Ventas Manuales</h3>
+        <div class="form-grid" style="margin-bottom:10px;">
+          <div class="form-group">
+            <label>Fecha</label>
+            <input type="date" id="pm-sale-date">
+          </div>
+          <div class="form-group">
+            <label>Unidades</label>
+            <input type="number" id="pm-sale-units" placeholder="0" min="1">
+          </div>
+          <div class="form-group">
+            <label>Origen / Nota</label>
+            <input type="text" id="pm-sale-note" placeholder="ej: Orgánico, Email, Influencer…">
+          </div>
+          <div class="form-group" style="justify-content:flex-end;">
+            <label>&nbsp;</label>
+            <button class="btn btn-success btn-sm" onclick="addManualSale()">+ Añadir</button>
+          </div>
+        </div>
+        <div id="pm-manual-sales-list"></div>
       </div>
     </div>
     <div class="modal-footer">
@@ -733,6 +790,11 @@ select option{background:var(--bg3);}
         <div class="form-group">
           <label>BEROAS (Break Even)</label>
           <input type="text" id="camp-beroas" readonly style="opacity:.6">
+        </div>
+        <div class="form-group">
+          <label>Ingresos Totales Generados €</label>
+          <input type="number" id="camp-total-revenue" placeholder="0.00" step="0.01"
+            title="Total de ingresos que ha generado esta campaña (para calcular ventas)">
         </div>
         <div class="form-group">
           <label>Estado</label>
@@ -941,10 +1003,40 @@ function renderDashboard() {
     }
   });
 
-  // Products table
+  // Top sellers table
+  const tsbody = document.getElementById('dash-topsellers-table');
+  const bySales = [...state.products]
+    .map(p => {
+      const totUnits = getProductTotalSales(p.id);
+      const rev = getProductRevenue(p.id);
+      const profit = getProductProfit(p.id);
+      const sources = [];
+      if (getProductCreativeSales(p.id) > 0) sources.push('Creativos');
+      if (getProductCampaignSales(p.id) > 0) sources.push('Campañas');
+      if ((p.manualSales||[]).reduce((s,e)=>s+(+e.units||0),0) > 0) sources.push('Manual');
+      return {...p, totUnits, rev, profit, sources};
+    })
+    .filter(p => p.totUnits > 0)
+    .sort((a,b) => b.totUnits - a.totUnits)
+    .slice(0, 8);
+  tsbody.innerHTML = bySales.length ? bySales.map(p => `
+    <tr>
+      <td>${p.title}</td>
+      <td style="font-weight:700;">${p.totUnits}</td>
+      <td class="text-green">${fmtEur(p.rev)}</td>
+      <td class="${p.profit>=0?'text-green':'text-red'}">${fmtEur(p.profit)}</td>
+      <td style="font-size:11px;color:var(--text2);">${p.sources.join(', ')||'—'}</td>
+    </tr>`).join('') :
+    '<tr><td colspan="5" class="text-muted" style="text-align:center;padding:24px;">Sin ventas registradas aún</td></tr>';
+
+  // Top profitable products table
   const sorted = [...state.products]
     .filter(p=>p.status==='activo')
-    .map(p=>({...p,marginVal:(+p.price||0)-(+p.cog||0),marginPct:p.price>0?((+p.price-(+p.cog||0))/(+p.price))*100:0}))
+    .map(p=>({...p,
+      marginVal:(+p.price||0)-(+p.cog||0),
+      marginPct:p.price>0?((+p.price-(+p.cog||0))/(+p.price))*100:0,
+      totUnits: getProductTotalSales(p.id)
+    }))
     .sort((a,b)=>b.marginVal-a.marginVal)
     .slice(0,8);
   const ptbody = document.getElementById('dash-products-table');
@@ -955,7 +1047,7 @@ function renderDashboard() {
       <td>${fmtEur(p.cog)}</td>
       <td class="${p.marginVal>=0?'text-green':'text-red'}">${fmtEur(p.marginVal)}</td>
       <td class="${p.marginPct>=30?'text-green':p.marginPct>=15?'text-yellow':'text-red'}">${fmtPct(p.marginPct)}</td>
-      <td>${statusBadge(p.status)}</td>
+      <td>${p.totUnits > 0 ? `<span class="product-sales-badge">📦 ${p.totUnits}</span>` : '<span class="text-muted">—</span>'}</td>
     </tr>`).join('') :
     '<tr><td colspan="6" class="text-muted" style="text-align:center;padding:24px;">Sin productos activos</td></tr>';
 
@@ -979,42 +1071,142 @@ function renderDashboard() {
 }
 
 // ============================================================
+// SALES HELPERS
+// ============================================================
+function getProductCreativeSales(productId) {
+  // Sum units from all creatives linked to this product
+  return state.creatives
+    .filter(c => c.productId === productId)
+    .reduce((total, c) => {
+      const prod = getProduct(productId);
+      const price = prod ? (+prod.price||0) : 0;
+      const rev = calcCreativeRevenue(c);
+      return total + calcUnitsFromRev(rev, price);
+    }, 0);
+}
+
+function getProductCampaignSales(productId) {
+  // Sum units from campaigns linked to this product (using totalRevenue field)
+  return state.campaigns
+    .filter(c => c.productId === productId)
+    .reduce((total, c) => {
+      const prod = getProduct(productId);
+      const price = prod ? (+prod.price||0) : 0;
+      const rev = +c.totalRevenue||0;
+      return total + calcUnitsFromRev(rev, price);
+    }, 0);
+}
+
+function getProductManualSales(productId) {
+  const prod = getProduct(productId);
+  if (!prod) return 0;
+  return (prod.manualSales||[]).reduce((s,e)=>s+(+e.units||0),0);
+}
+
+function getProductTotalSales(productId) {
+  return getProductCreativeSales(productId)
+    + getProductCampaignSales(productId)
+    + getProductManualSales(productId);
+}
+
+function getProductRevenue(productId) {
+  const prod = getProduct(productId);
+  if (!prod) return 0;
+  return getProductTotalSales(productId) * (+prod.price||0);
+}
+
+function getProductProfit(productId) {
+  const prod = getProduct(productId);
+  if (!prod) return 0;
+  const units = getProductTotalSales(productId);
+  const rev = units * (+prod.price||0);
+  const cogTotal = units * (+prod.cog||0);
+  // Subtract ad spend from linked creatives and campaigns
+  const adSpend = state.creatives
+    .filter(c=>c.productId===productId)
+    .reduce((s,c)=>s+calcCreativeSpend(c),0)
+    + state.campaigns
+    .filter(c=>c.productId===productId)
+    .reduce((s,c)=>s+(+c.budget||0),0);
+  return rev - cogTotal - adSpend;
+}
+
+// ============================================================
 // CATALOG
 // ============================================================
+
+function buildCategoryFilter() {
+  const sel = document.getElementById('cat-filter-cat');
+  if (!sel) return;
+  const current = sel.value;
+  // Collect unique categories from all products
+  const cats = new Set();
+  state.products.forEach(p => {
+    cats.add(p.category && p.category.trim() ? p.category.trim() : 'Sin categoría');
+  });
+  const sorted = [...cats].sort((a,b)=>{
+    if (a==='Sin categoría') return 1;
+    if (b==='Sin categoría') return -1;
+    return a.localeCompare(b);
+  });
+  sel.innerHTML = '<option value="">Todas las categorías</option>' +
+    sorted.map(c=>`<option value="${c}" ${c===current?'selected':''}>${c}</option>`).join('');
+}
+
 function renderCatalog() {
+  buildCategoryFilter();
+
   const search = (document.getElementById('cat-search').value||'').toLowerCase();
   const filterCat = document.getElementById('cat-filter-cat').value;
   const filterStatus = document.getElementById('cat-filter-status').value;
+  const filterSales = document.getElementById('cat-filter-sales').value;
+
   let products = state.products.filter(p => {
+    const pCat = p.category && p.category.trim() ? p.category.trim() : 'Sin categoría';
     const matchSearch = !search || p.title.toLowerCase().includes(search);
-    const matchCat = !filterCat || p.category === filterCat;
+    const matchCat = !filterCat || pCat === filterCat;
     const matchStatus = !filterStatus || p.status === filterStatus;
-    return matchSearch && matchCat && matchStatus;
+    const totalSales = getProductTotalSales(p.id);
+    const matchSales = !filterSales
+      || (filterSales === 'con-ventas' && totalSales > 0)
+      || (filterSales === 'sin-ventas' && totalSales === 0);
+    return matchSearch && matchCat && matchStatus && matchSales;
   });
+
   const grid = document.getElementById('catalog-grid');
   if (!products.length) {
     grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
       <div class="empty-icon">👗</div>
-      <p>No hay productos. Usa el panel de importación para comenzar.</p></div>`;
+      <p>${state.products.length ? 'No hay productos con los filtros seleccionados.' : 'No hay productos. Usa el panel de importación para comenzar.'}</p>
+    </div>`;
     return;
   }
+
   grid.innerHTML = products.map(p => {
     const margin = (+p.price||0) - (+p.cog||0);
     const marginPct = p.price>0 ? margin/p.price*100 : 0;
     const img = (p.images&&p.images[0]) ? p.images[0] : '';
+    const totalSales = getProductTotalSales(p.id);
+    const profit = getProductProfit(p.id);
+    const pCat = p.category && p.category.trim() ? p.category.trim() : 'Sin categoría';
     return `<div class="product-card" onclick="editProduct('${p.id}')">
       ${img ? `<img src="${img}" alt="${p.title}" loading="lazy" onerror="this.style.display='none'">` :
         `<div style="height:180px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:40px;">👗</div>`}
       <div class="product-card-body">
         <h4>${p.title}</h4>
-        <div class="card-meta-row" style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
           <span style="font-weight:700;color:var(--accent2)">${fmtEur(p.price)}</span>
           ${statusBadge(p.status||'activo')}
         </div>
         <div style="font-size:12px;color:var(--text2);margin-top:4px;">
           COG: ${fmtEur(p.cog)} · Margen: <span class="${marginPct>=30?'text-green':marginPct>=15?'text-yellow':'text-red'}">${fmtPct(marginPct)}</span>
         </div>
-        ${p.category?`<div style="font-size:11px;color:var(--text2);margin-top:2px;">${p.category}${p.supplier?' · '+p.supplier:''}</div>`:''}
+        <div style="font-size:11px;color:var(--text2);margin-top:2px;">${pCat}${p.supplier?' · '+p.supplier:''}</div>
+        ${totalSales > 0 ? `
+        <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
+          <span class="product-sales-badge">📦 ${totalSales} uds.</span>
+          <span class="product-profit-badge ${profit>=0?'product-profit-pos':'product-profit-neg'}">${fmtEur(profit)}</span>
+        </div>` : ''}
       </div>
     </div>`;
   }).join('');
@@ -1023,7 +1215,7 @@ function renderCatalog() {
   const syncEl = document.getElementById('cat-last-sync');
   if (syncEl && state.lastSync) {
     const d = new Date(state.lastSync);
-    syncEl.textContent = `Última sincronización: ${d.toLocaleString('es-ES')} · ${state.products.length} productos`;
+    syncEl.textContent = `Última sync: ${d.toLocaleString('es-ES')} · ${state.products.length} productos`;
   }
 }
 
@@ -1080,14 +1272,18 @@ async function fetchByURL() {
       const price = variant ? parseFloat(variant.price)||0 : 0;
       const images = (sp.images||[]).map(i=>i.src);
       const isNew = !state.products.find(p=>p.handle===sp.handle);
+      // Use product_type from Shopify as category; fall back to 'Sin categoría'
+      const rawType = (sp.product_type||sp.type||'').trim();
+      const category = rawType || 'Sin categoría';
       return {
         _source: 'url', _baseUrl: url,
         shopifyId: sp.id, handle: sp.handle,
         title: sp.title, description: sp.body_html||'',
         price, images, variants: sp.variants||[],
         url: url + '/products/' + sp.handle,
-        supplier: sp.vendor||'', category: 'Otros',
+        supplier: sp.vendor||'', category,
         cog: 0, status: 'activo', notes: '',
+        manualSales: [],
         _isNew: isNew
       };
     });
@@ -1344,10 +1540,11 @@ function confirmImport() {
         url: item.url||'',
         shopifyId: item.shopifyId||null,
         cog: 0,
-        category: item.category||'Otros',
+        category: item.category||'Sin categoría',
         supplier: item.supplier||'',
         status: item.status||'activo',
-        notes: item.notes||''
+        notes: item.notes||'',
+        manualSales: []
       });
       added++;
     }
@@ -1390,12 +1587,93 @@ function editProduct(id) {
   document.getElementById('pm-title').value = p.title || '';
   document.getElementById('pm-price').value = p.price || '';
   document.getElementById('pm-cog').value = p.cog || '';
-  document.getElementById('pm-category').value = p.category || 'Otros';
+  document.getElementById('pm-category').value = p.category || '';
   document.getElementById('pm-supplier').value = p.supplier || '';
   document.getElementById('pm-status').value = p.status || 'activo';
   document.getElementById('pm-notes').value = p.notes || '';
   calcProductMargin();
+
+  // Populate category datalist with existing categories
+  const dl = document.getElementById('pm-category-list');
+  if (dl) {
+    const cats = new Set();
+    state.products.forEach(pr => { if (pr.category) cats.add(pr.category); });
+    dl.innerHTML = [...cats].sort().map(c=>`<option value="${c}">`).join('');
+  }
+
+  // Populate sales summary
+  if (p.id) {
+    const cSales = getProductCreativeSales(p.id);
+    const campSales = getProductCampaignSales(p.id);
+    const manSales = getProductManualSales(p.id);
+    const total = cSales + campSales + manSales;
+    const rev = getProductRevenue(p.id);
+    const cogTotal = total * (+p.cog||0);
+    const profit = getProductProfit(p.id);
+    document.getElementById('pm-sales-creatives').textContent = cSales + ' uds.';
+    document.getElementById('pm-sales-campaigns').textContent = campSales + ' uds.';
+    document.getElementById('pm-sales-manual-total').textContent = manSales + ' uds.';
+    document.getElementById('pm-sales-total').textContent = total + ' uds.';
+    document.getElementById('pm-sales-revenue').textContent = fmtEur(rev);
+    document.getElementById('pm-sales-cog-total').textContent = fmtEur(cogTotal);
+    const profEl = document.getElementById('pm-sales-profit');
+    profEl.textContent = fmtEur(profit);
+    profEl.className = profit >= 0 ? 'text-green' : 'text-red';
+  }
+
+  // Default date for manual sale
+  document.getElementById('pm-sale-date').value = today();
+  document.getElementById('pm-sale-units').value = '';
+  document.getElementById('pm-sale-note').value = '';
+  renderManualSalesList(p.id);
+
   document.getElementById('product-modal').classList.add('open');
+}
+
+function renderManualSalesList(productId) {
+  const p = getProduct(productId);
+  const list = document.getElementById('pm-manual-sales-list');
+  if (!list) return;
+  const entries = p ? (p.manualSales||[]) : [];
+  if (!entries.length) {
+    list.innerHTML = '<p class="text-muted" style="font-size:12px;">Sin ventas manuales registradas.</p>';
+    return;
+  }
+  list.innerHTML = `<table style="width:100%;"><thead><tr><th>Fecha</th><th>Uds.</th><th>Origen</th><th></th></tr></thead>
+    <tbody>${entries.map((e,i)=>`<tr>
+      <td style="font-size:12px;">${e.date||'—'}</td>
+      <td style="font-weight:600;">${e.units}</td>
+      <td style="font-size:12px;color:var(--text2);">${e.note||'—'}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteManualSale('${productId}',${i})">✕</button></td>
+    </tr>`).join('')}</tbody></table>`;
+}
+
+function addManualSale() {
+  const id = document.getElementById('pm-id').value;
+  if (!id) { alert('Guarda el producto primero'); return; }
+  const date = document.getElementById('pm-sale-date').value || today();
+  const units = parseInt(document.getElementById('pm-sale-units').value)||0;
+  const note = document.getElementById('pm-sale-note').value;
+  if (units <= 0) { alert('Introduce un número de unidades mayor que 0'); return; }
+  const p = getProduct(id);
+  if (!p) return;
+  if (!p.manualSales) p.manualSales = [];
+  p.manualSales.push({date, units, note});
+  saveState();
+  renderManualSalesList(id);
+  // Refresh sales summary
+  editProduct(id);
+  document.getElementById('pm-sale-units').value = '';
+  document.getElementById('pm-sale-note').value = '';
+}
+
+function deleteManualSale(productId, idx) {
+  const p = getProduct(productId);
+  if (!p || !p.manualSales) return;
+  p.manualSales.splice(idx, 1);
+  saveState();
+  renderManualSalesList(productId);
+  editProduct(productId);
 }
 
 function calcProductMargin() {
@@ -1410,17 +1688,23 @@ function calcProductMargin() {
 function saveProduct() {
   const id = document.getElementById('pm-id').value;
   const existing = id ? state.products.find(p=>p.id===id) : null;
+  const rawCat = (document.getElementById('pm-category').value||'').trim();
   const data = {
     title: document.getElementById('pm-title').value,
     price: parseFloat(document.getElementById('pm-price').value)||0,
     cog: parseFloat(document.getElementById('pm-cog').value)||0,
-    category: document.getElementById('pm-category').value,
+    category: rawCat || 'Sin categoría',
     supplier: document.getElementById('pm-supplier').value,
     status: document.getElementById('pm-status').value,
     notes: document.getElementById('pm-notes').value
+    // manualSales is NOT included here — managed separately via addManualSale/deleteManualSale
   };
-  if (existing) { Object.assign(existing, data); }
-  else { state.products.push({id:uid(), images:[], variants:[], ...data}); }
+  if (existing) {
+    Object.assign(existing, data);
+    // preserve manualSales
+  } else {
+    state.products.push({id:uid(), images:[], variants:[], manualSales:[], ...data});
+  }
   saveState();
   closeModal('product-modal');
   renderCatalog();
@@ -1700,6 +1984,7 @@ function openCampaignModal(id) {
   document.getElementById('camp-name').value = c ? c.name : '';
   document.getElementById('camp-budget').value = c ? c.budget||'' : '';
   document.getElementById('camp-roas').value = c ? c.roas||'' : '';
+  document.getElementById('camp-total-revenue').value = c ? c.totalRevenue||'' : '';
   document.getElementById('camp-status').value = c ? c.status : 'activa';
   document.getElementById('camp-notes').value = c ? c.notes||'' : '';
 
@@ -1724,6 +2009,7 @@ function saveCampaign() {
     productId: document.getElementById('camp-product').value,
     budget: parseFloat(document.getElementById('camp-budget').value)||0,
     roas: parseFloat(document.getElementById('camp-roas').value)||0,
+    totalRevenue: parseFloat(document.getElementById('camp-total-revenue').value)||0,
     status: document.getElementById('camp-status').value,
     notes: document.getElementById('camp-notes').value
   };
