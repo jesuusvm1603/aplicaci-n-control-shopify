@@ -122,6 +122,7 @@ select option{background:var(--bg3);}
 .text-green{color:var(--green);}
 .text-red{color:var(--red);}
 .text-yellow{color:var(--yellow);}
+.text-orange{color:var(--orange);}
 .text-muted{color:var(--text2);}
 .mb8{margin-bottom:8px;}
 .mb16{margin-bottom:16px;}
@@ -431,6 +432,7 @@ select option{background:var(--bg3);}
       <h1>Dashboard General</h1>
       <p id="dash-date">Cargando...</p>
     </div>
+    <div id="inv-alerts" style="margin-bottom:16px;display:flex;flex-direction:column;gap:8px;"></div>
     <div class="cards-grid" id="dash-cards"></div>
     <div class="section-row">
       <div class="chart-wrap">
@@ -772,10 +774,26 @@ select option{background:var(--bg3);}
 
       <!-- Summary cards -->
       <div class="cards-grid mb16" id="inv-summary-cards">
-        <div class="card"><div class="card-label">Total Pagado</div><div class="card-value text-green" id="inv-total-paid">€0</div></div>
-        <div class="card"><div class="card-label">Total Pendiente</div><div class="card-value text-yellow" id="inv-total-pending">€0</div></div>
-        <div class="card"><div class="card-label">Total Vencido</div><div class="card-value text-red" id="inv-total-overdue">€0</div></div>
-        <div class="card"><div class="card-label">Total General</div><div class="card-value" id="inv-total-all">€0</div></div>
+        <div class="card">
+          <div class="card-label-row"><span class="card-label">Total Pagado</span><span class="tooltip-icon" data-tip="Suma de todas las facturas que ya has pagado">?</span></div>
+          <div class="card-value text-green" id="inv-total-paid">€0</div>
+        </div>
+        <div class="card">
+          <div class="card-label-row"><span class="card-label">Total Pendiente</span><span class="tooltip-icon" data-tip="Suma de las facturas que tienes que pagar pero aún estás a tiempo">?</span></div>
+          <div class="card-value text-yellow" id="inv-total-pending">€0</div>
+        </div>
+        <div class="card">
+          <div class="card-label-row"><span class="card-label">Total Por Vencer</span><span class="tooltip-icon" data-tip="Suma de las facturas que vencen en los próximos 3 días. Actúa antes de que se conviertan en vencidas">?</span></div>
+          <div class="card-value text-orange" id="inv-total-upcoming">€0</div>
+        </div>
+        <div class="card">
+          <div class="card-label-row"><span class="card-label">Total Vencido</span><span class="tooltip-icon" data-tip="Suma de las facturas que deberías haber pagado y no has pagado. Pueden generar recargos o problemas con tus proveedores">?</span></div>
+          <div class="card-value text-red" id="inv-total-overdue">€0</div>
+        </div>
+        <div class="card">
+          <div class="card-label-row"><span class="card-label">Total General</span><span class="tooltip-icon" data-tip="Suma de absolutamente todas tus facturas: pagadas, pendientes y vencidas">?</span></div>
+          <div class="card-value" id="inv-total-all">€0</div>
+        </div>
       </div>
 
       <!-- Add invoice form -->
@@ -827,8 +845,9 @@ select option{background:var(--bg3);}
           <div class="flex" style="gap:6px;">
             <button class="btn btn-sm btn-secondary inv-filter-btn active" onclick="setInvFilter('all',this)">Todas</button>
             <button class="btn btn-sm btn-secondary inv-filter-btn" onclick="setInvFilter('pendiente',this)">Pendientes</button>
-            <button class="btn btn-sm btn-secondary inv-filter-btn" onclick="setInvFilter('pagada',this)">Pagadas</button>
+            <button class="btn btn-sm btn-secondary inv-filter-btn" onclick="setInvFilter('por_vencer',this)" style="color:var(--orange);">Por Vencer</button>
             <button class="btn btn-sm btn-secondary inv-filter-btn" onclick="setInvFilter('vencida',this)">Vencidas</button>
+            <button class="btn btn-sm btn-secondary inv-filter-btn" onclick="setInvFilter('pagada',this)">Pagadas</button>
           </div>
         </div>
         <div style="overflow-x:auto;">
@@ -1553,6 +1572,7 @@ function getProduct(id) { return state.products.find(p=>p.id===id); }
 let profitChartInst = null, expenseChartInst = null;
 
 function renderDashboard() {
+  renderInvAlerts();
   const now = new Date();
   document.getElementById('dash-date').textContent =
     now.toLocaleDateString('es-ES', {weekday:'long',year:'numeric',month:'long',day:'numeric'});
@@ -3150,8 +3170,53 @@ function renderLiquidity() {
 
 function getInvoicesDebt() {
   return (state.finance.invoices||[])
-    .filter(i=>i.status==='pendiente'||i.status==='vencida')
+    .filter(i=>i.status==='pendiente'||i.status==='vencida'||i.status==='por_vencer')
     .reduce((s,i)=>s+(+i.amount||0),0);
+}
+
+// Returns days until dueDate (negative = already passed)
+function daysUntilDue(dueDate) {
+  if (!dueDate) return null;
+  const now  = new Date(); now.setHours(0,0,0,0);
+  const due  = new Date(dueDate); due.setHours(0,0,0,0);
+  return Math.round((due - now) / 86400000);
+}
+
+// Auto-updates statuses based on today's date (mutates state, returns true if anything changed)
+function autoUpdateInvoiceStatuses() {
+  let changed = false;
+  (state.finance.invoices||[]).forEach(inv => {
+    if (inv.status === 'pagada') return; // never auto-change paid invoices
+    const d = daysUntilDue(inv.dueDate);
+    if (d === null) return;
+    const newStatus = d < 0 ? 'vencida' : d <= 3 ? 'por_vencer' : 'pendiente';
+    if (inv.status !== newStatus) { inv.status = newStatus; changed = true; }
+  });
+  if (changed) saveState();
+  return changed;
+}
+
+function renderInvAlerts() {
+  const el = document.getElementById('inv-alerts');
+  if (!el) return;
+  autoUpdateInvoiceStatuses();
+  const all = state.finance.invoices || [];
+  const overdue  = all.filter(i=>i.status==='vencida');
+  const upcoming = all.filter(i=>i.status==='por_vencer');
+  const parts = [];
+  if (overdue.length) {
+    const total = overdue.reduce((s,i)=>s+(+i.amount||0),0);
+    parts.push(`<div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:var(--red);border-radius:8px;padding:10px 14px;font-size:13px;cursor:pointer;" onclick="showModule('finance');setTimeout(()=>financeTab('invoices'),50)">
+      ⚠️ Tienes <b>${overdue.length}</b> factura${overdue.length>1?'s':''} vencida${overdue.length>1?'s':''} por valor de <b>${fmtEur(total)}</b>
+    </div>`);
+  }
+  if (upcoming.length) {
+    const total = upcoming.reduce((s,i)=>s+(+i.amount||0),0);
+    parts.push(`<div style="background:rgba(249,115,22,.1);border:1px solid rgba(249,115,22,.3);color:var(--orange);border-radius:8px;padding:10px 14px;font-size:13px;cursor:pointer;" onclick="showModule('finance');setTimeout(()=>financeTab('invoices'),50)">
+      ⏰ Tienes <b>${upcoming.length}</b> factura${upcoming.length>1?'s':''} que vence${upcoming.length>1?'n':''} en menos de 3 días por valor de <b>${fmtEur(total)}</b>
+    </div>`);
+  }
+  el.innerHTML = parts.join('');
 }
 
 function calcLiquidity() {
@@ -3287,33 +3352,54 @@ function changeInvoiceStatus(id, newStatus) {
 }
 
 function renderInvoices() {
+  autoUpdateInvoiceStatuses();
   const all = state.finance.invoices || [];
-  // summary
-  const paid    = all.filter(i=>i.status==='pagada').reduce((s,i)=>s+(+i.amount||0),0);
-  const pending = all.filter(i=>i.status==='pendiente').reduce((s,i)=>s+(+i.amount||0),0);
-  const overdue = all.filter(i=>i.status==='vencida').reduce((s,i)=>s+(+i.amount||0),0);
-  document.getElementById('inv-total-paid').textContent    = fmtEur(paid);
-  document.getElementById('inv-total-pending').textContent = fmtEur(pending);
-  document.getElementById('inv-total-overdue').textContent = fmtEur(overdue);
-  document.getElementById('inv-total-all').textContent     = fmtEur(paid+pending+overdue);
+
+  // summary totals
+  const paid     = all.filter(i=>i.status==='pagada').reduce((s,i)=>s+(+i.amount||0),0);
+  const pending  = all.filter(i=>i.status==='pendiente').reduce((s,i)=>s+(+i.amount||0),0);
+  const upcoming = all.filter(i=>i.status==='por_vencer').reduce((s,i)=>s+(+i.amount||0),0);
+  const overdue  = all.filter(i=>i.status==='vencida').reduce((s,i)=>s+(+i.amount||0),0);
+  document.getElementById('inv-total-paid').textContent     = fmtEur(paid);
+  document.getElementById('inv-total-pending').textContent  = fmtEur(pending);
+  document.getElementById('inv-total-upcoming').textContent = fmtEur(upcoming);
+  document.getElementById('inv-total-overdue').textContent  = fmtEur(overdue);
+  document.getElementById('inv-total-all').textContent      = fmtEur(paid+pending+upcoming+overdue);
 
   // filter
   const list = invFilter==='all' ? all : all.filter(i=>i.status===invFilter);
   const tbody = document.getElementById('inv-tbody');
   if (!list.length) {
-    tbody.innerHTML = '<tr><td colspan="8" class="text-muted" style="text-align:center;padding:24px;">Sin facturas</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="text-muted" style="text-align:center;padding:24px;">Sin facturas en este estado</td></tr>';
     return;
   }
-  const statusLabel = { pendiente:'<span class="badge badge-yellow">Pendiente</span>', pagada:'<span class="badge badge-green">Pagada</span>', vencida:'<span class="badge badge-red">Vencida</span>' };
-  const nextStatus  = { pendiente:'pagada', pagada:'pendiente', vencida:'pagada' };
-  const btnLabel    = { pendiente:'Marcar pagada', pagada:'Marcar pendiente', vencida:'Marcar pagada' };
-  tbody.innerHTML = list.map(i=>`
-    <tr style="${i.status==='vencida'?'background:rgba(239,68,68,.06);':''}">
+
+  const statusLabel = {
+    pendiente:  '<span class="badge badge-yellow">Pendiente</span>',
+    pagada:     '<span class="badge badge-green">Pagada</span>',
+    vencida:    '<span class="badge badge-red">Vencida</span>',
+    por_vencer: '<span class="badge badge-orange">Por Vencer</span>'
+  };
+  const nextStatus = { pendiente:'pagada', pagada:'pendiente', vencida:'pagada', por_vencer:'pagada' };
+  const btnLabel   = { pendiente:'Marcar pagada', pagada:'Marcar pendiente', vencida:'Marcar pagada', por_vencer:'Marcar pagada' };
+  const rowBg      = { vencida:'background:rgba(239,68,68,.06);', por_vencer:'background:rgba(249,115,22,.06);', pendiente:'', pagada:'' };
+  const amtColor   = { vencida:'color:var(--red)', por_vencer:'color:var(--orange)', pagada:'color:var(--green)', pendiente:'color:var(--yellow)' };
+
+  tbody.innerHTML = list.map(i => {
+    const d = daysUntilDue(i.dueDate);
+    let dueCell = i.dueDate || '—';
+    if (i.status==='por_vencer' && d !== null) {
+      dueCell = `${i.dueDate} <span style="color:var(--orange);font-size:11px;font-weight:700;">⚠️ Vence en ${d} día${d===1?'':'s'}</span>`;
+    } else if (i.status==='vencida' && i.dueDate) {
+      dueCell = `${i.dueDate} <span style="color:var(--red);font-size:11px;font-weight:700;">Vencida</span>`;
+    }
+    return `
+    <tr style="${rowBg[i.status]||''}">
       <td>${i.date}</td>
       <td style="font-weight:600;">${i.concept}</td>
       <td>${i.supplier||'—'}</td>
-      <td style="font-weight:700;${i.status==='vencida'?'color:var(--red)':i.status==='pagada'?'color:var(--green)':'color:var(--yellow)'}">${fmtEur(+i.amount||0)}</td>
-      <td>${i.dueDate||'—'}</td>
+      <td style="font-weight:700;${amtColor[i.status]||''}">${fmtEur(+i.amount||0)}</td>
+      <td>${dueCell}</td>
       <td>${statusLabel[i.status]||i.status}</td>
       <td style="font-size:12px;color:var(--text2);">${i.notes||'—'}</td>
       <td>
@@ -3322,7 +3408,8 @@ function renderInvoices() {
           <button class="btn btn-sm btn-danger" style="font-size:11px;padding:3px 7px;" onclick="deleteInvoice(${i.id})">✕</button>
         </div>
       </td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 }
 
 // ============================================================
