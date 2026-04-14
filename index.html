@@ -3093,9 +3093,9 @@ function renderMonthlySummary() {
   const cf = getDailyFixedCost();
   const monthData = allMonths.map(ym => {
     const days = Object.values(state.finance.daily[ym]||{});
-    const rev = days.reduce((s,d)=>s+(+d.rev||0),0);
-    const cogs = days.reduce((s,d)=>s+(+d.cogs||0),0);
-    const ads = days.reduce((s,d)=>s+(+d.adSpend||0),0);
+    const rev  = days.reduce((s,d)=>s+(+d.rev||0)+(+d.autoRev||0),0);
+    const cogs = days.reduce((s,d)=>s+(+d.cogs||0)+(+d.autoCogs||0),0);
+    const ads  = days.reduce((s,d)=>s+(+d.adSpend||0)+(+d.autoAdSpend||0),0);
     const totalCF = cf * days.length;
     const profit = rev - cogs - ads - rev*0.03 - totalCF;
     const roas = ads>0?rev/ads:0;
