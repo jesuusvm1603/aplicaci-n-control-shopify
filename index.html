@@ -183,6 +183,12 @@ select option{background:var(--bg3);}
 .finance-table td input:focus{background:var(--bg3);border-radius:4px;}
 .total-row td{background:var(--bg3);font-weight:700;color:var(--accent2);}
 
+/* TOOLTIP */
+.th-wrap{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;}
+.tooltip-icon{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:rgba(148,163,184,.2);color:var(--text2);font-size:9px;font-weight:700;cursor:help;flex-shrink:0;position:relative;}
+.tooltip-icon:hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#1e2235;border:1px solid var(--border);color:var(--text);font-size:11px;font-weight:400;text-transform:none;letter-spacing:0;padding:6px 10px;border-radius:6px;white-space:nowrap;max-width:260px;white-space:normal;width:max-content;max-width:240px;z-index:999;pointer-events:none;line-height:1.4;box-shadow:0 4px 16px rgba(0,0,0,.4);}
+.tooltip-icon:hover::before{content:'';position:absolute;bottom:calc(100% + 1px);left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:#1e2235;z-index:999;}
+
 /* TABS */
 .tabs{display:flex;gap:4px;background:var(--bg3);border-radius:8px;padding:4px;margin-bottom:20px;width:fit-content;}
 .tab{padding:7px 16px;border-radius:6px;cursor:pointer;font-size:13px;color:var(--text2);transition:.2s;}
@@ -616,10 +622,24 @@ select option{background:var(--bg3);}
       <div class="finance-table-wrap table-wrap">
         <table class="finance-table" id="finance-daily-table">
           <thead><tr>
-            <th>Fecha</th><th>Ingresos</th><th>CPC</th><th>Visitas</th><th>Pedidos</th>
-            <th>AOV</th><th>Conv%</th><th>COGS</th><th>COGS%</th>
-            <th>Meta Ads</th><th>Ads%</th><th>Com.3%</th><th>Com.6%</th>
-            <th>CF Día</th><th>Profit</th><th>ROAS</th><th>Profit%</th><th></th>
+            <th><span class="th-wrap">Fecha<span class="tooltip-icon" data-tip="Día del mes">?</span></span></th>
+            <th><span class="th-wrap">Ingresos<span class="tooltip-icon" data-tip="Total de ventas brutas del día">?</span></span></th>
+            <th><span class="th-wrap">CPC<span class="tooltip-icon" data-tip="Coste por clic medio de tus anuncios ese día">?</span></span></th>
+            <th><span class="th-wrap">Visitas<span class="tooltip-icon" data-tip="Número de visitas a tu tienda ese día">?</span></span></th>
+            <th><span class="th-wrap">Pedidos<span class="tooltip-icon" data-tip="Número de pedidos completados ese día">?</span></span></th>
+            <th><span class="th-wrap">AOV<span class="tooltip-icon" data-tip="Average Order Value — ticket medio por pedido (Ingresos / Pedidos)">?</span></span></th>
+            <th><span class="th-wrap">Conv%<span class="tooltip-icon" data-tip="Tasa de conversión — porcentaje de visitas que compran (Pedidos / Visitas × 100)">?</span></span></th>
+            <th><span class="th-wrap">COGS<span class="tooltip-icon" data-tip="Cost of Goods Sold — coste total de los productos vendidos (unidades × coste proveedor)">?</span></span></th>
+            <th><span class="th-wrap">COGS%<span class="tooltip-icon" data-tip="Porcentaje que representa el coste de producto sobre los ingresos">?</span></span></th>
+            <th><span class="th-wrap">Meta Ads<span class="tooltip-icon" data-tip="Gasto total en publicidad de Meta (Facebook e Instagram) ese día">?</span></span></th>
+            <th><span class="th-wrap">Ads%<span class="tooltip-icon" data-tip="Porcentaje que representa el gasto en ads sobre los ingresos">?</span></span></th>
+            <th><span class="th-wrap">Com.3%<span class="tooltip-icon" data-tip="Comisión del 3% sobre ingresos (comisiones de pasarela de pago)">?</span></span></th>
+            <th><span class="th-wrap">Com.6%<span class="tooltip-icon" data-tip="Comisión del 6% sobre ingresos (referencia alternativa)">?</span></span></th>
+            <th><span class="th-wrap">CF Día<span class="tooltip-icon" data-tip="Coste Fijo del día — total de costes fijos mensuales dividido entre 30">?</span></span></th>
+            <th><span class="th-wrap">Profit<span class="tooltip-icon" data-tip="Beneficio neto del día (Ingresos - COGS - Meta Ads - COM.3% - CF Día)">?</span></span></th>
+            <th><span class="th-wrap">ROAS<span class="tooltip-icon" data-tip="Return on Ad Spend — retorno de inversión publicitaria (Ingresos / Meta Ads)">?</span></span></th>
+            <th><span class="th-wrap">Profit%<span class="tooltip-icon" data-tip="Porcentaje de beneficio neto sobre ingresos totales">?</span></span></th>
+            <th></th>
           </tr></thead>
           <tbody id="finance-daily-tbody"></tbody>
           <tfoot><tr class="total-row" id="finance-daily-totals"></tr></tfoot>
@@ -651,6 +671,9 @@ select option{background:var(--bg3);}
 
     <!-- LIQUIDITY -->
     <div id="fin-liquidity" style="display:none">
+      <div style="background:rgba(99,102,241,.07);border:1px solid rgba(99,102,241,.2);border-radius:10px;padding:14px 18px;margin-bottom:20px;font-size:13px;color:var(--text2);line-height:1.6;">
+        La liquidez te muestra tu situación financiera real. Aquí puedes ver cuánto dinero tienes disponible para gastar ahora mismo, cuánto está por llegar pero aún no puedes usar, y cuánto debes. Con estos datos conoces tu patrimonio neto real.
+      </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
         <div class="form-panel">
           <h3 class="text-green">💧 Fondos Líquidos</h3>
@@ -678,6 +701,8 @@ select option{background:var(--bg3);}
         <div class="card"><div class="card-label">No Líquido Total</div><div class="card-value text-yellow" id="liq-total-illiquid">€0</div></div>
         <div class="card"><div class="card-label">Facturas + Deudas</div><div class="card-value text-red" id="liq-total-debt">€0</div></div>
         <div class="card"><div class="card-label">Patrimonio Neto</div><div class="card-value" id="liq-net">€0</div></div>
+        <div class="card" id="liq-available-card"><div class="card-label">Dinero Disponible Ahora</div><div class="card-value" id="liq-available">€0</div><div class="card-sub" id="liq-available-warn" style="display:none;color:var(--red);font-size:12px;margin-top:6px;">⚠️ No tienes suficiente líquido para cubrir tus deudas</div></div>
+        <div class="card"><div class="card-label">Dinero por Llegar</div><div class="card-value text-yellow" id="liq-incoming">€0</div><div class="card-sub neutral">(aún no disponible)</div></div>
       </div>
     </div>
 
@@ -2883,7 +2908,7 @@ function renderFixedCosts() {
   const defaults = [
     {key:'team',label:'Team / Empleados'},
     {key:'apps',label:'Apps / Software'},
-    {key:'chatgpt',label:'ChatGPT / IA'},
+    {key:'chatgpt',label:'Inteligencia Artificial'},
     {key:'creatives',label:'Creativos / Diseño'},
     {key:'banking',label:'Banking / Comisiones'}
   ];
@@ -2987,12 +3012,19 @@ function calcLiquidity() {
   const invoices = get('liq-invoices');
   const debts = get('liq-debts');
   const net = liquid + illiquid - invoices - debts;
+  const available = liquid - invoices - debts;
   document.getElementById('liq-total-liquid').textContent = fmtEur(liquid);
   document.getElementById('liq-total-illiquid').textContent = fmtEur(illiquid);
   document.getElementById('liq-total-debt').textContent = fmtEur(invoices+debts);
   const netEl = document.getElementById('liq-net');
   netEl.textContent = fmtEur(net);
   netEl.className = 'card-value ' + (net>=0?'text-green':'text-red');
+  const availEl = document.getElementById('liq-available');
+  availEl.textContent = fmtEur(available);
+  availEl.className = 'card-value ' + (available>=0?'text-green':'text-red');
+  const warnEl = document.getElementById('liq-available-warn');
+  warnEl.style.display = available < 0 ? 'block' : 'none';
+  document.getElementById('liq-incoming').textContent = fmtEur(illiquid);
 }
 
 function saveLiquidity() {
