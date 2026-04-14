@@ -628,6 +628,10 @@ select option{background:var(--bg3);}
 
     <!-- DAILY -->
     <div id="fin-daily">
+      <div style="background:rgba(99,102,241,.07);border:1px solid rgba(99,102,241,.2);border-radius:10px;padding:14px 18px;margin-bottom:16px;font-size:13px;color:var(--text2);line-height:1.7;">
+        <p>Aquí registras o se rellenan automáticamente los datos de cada día. Los ingresos, COGS y Meta Ads vienen de lo que introduces en Catálogo, Testing y Escalado. El profit se calcula solo restando todos los gastos a los ingresos.</p>
+        <p style="margin-top:10px;color:var(--yellow);">⚠️ Los campos con ⚡ se rellenan automáticamente desde otros módulos. Los campos sin ⚡ los puedes editar manualmente haciendo clic en ellos.</p>
+      </div>
       <div class="flex-between mb16">
         <div class="flex">
           <input type="month" id="fin-month-select" onchange="renderFinanceDaily()">
@@ -669,8 +673,12 @@ select option{background:var(--bg3);}
 
     <!-- FIXED COSTS -->
     <div id="fin-fixed" style="display:none">
+      <div style="background:rgba(99,102,241,.07);border:1px solid rgba(99,102,241,.2);border-radius:10px;padding:14px 18px;margin-bottom:20px;font-size:13px;color:var(--text2);line-height:1.7;">
+        <p>Los Costes Fijos son los gastos que tienes cada mes independientemente de si vendes o no. Una vez configurados aquí, se dividen entre 30 y se descuentan automáticamente del profit de cada día en la columna CF DÍA de la tabla de Profit Diario.</p>
+        <p style="margin-top:10px;color:var(--yellow);">⚠️ Estos costes no aparecen en la Liquidez. Solo afectan al cálculo del profit diario y mensual.</p>
+      </div>
       <div class="form-panel">
-        <h3>Costes Fijos Mensuales</h3>
+        <h3 style="display:flex;align-items:center;gap:6px;">Costes Fijos Mensuales<span class="tooltip-icon" data-tip="Gastos fijos mensuales que se reparten entre los 30 días del mes y se restan automáticamente de tu profit diario.">?</span></h3>
         <div class="form-grid" id="fixed-costs-form"></div>
         <div class="flex mt16 gap8">
           <button class="btn btn-secondary btn-sm" onclick="addCustomFixedCost()">+ Añadir coste personalizado</button>
