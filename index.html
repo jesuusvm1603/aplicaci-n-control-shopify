@@ -840,15 +840,33 @@ select option{background:var(--bg3);}
 
       <!-- Filter + table -->
       <div class="table-wrap">
-        <div class="table-header flex-between">
-          <h3>Listado de Facturas</h3>
-          <div class="flex" style="gap:6px;">
-            <button class="btn btn-sm btn-secondary inv-filter-btn active" onclick="setInvFilter('all',this)">Todas</button>
-            <button class="btn btn-sm btn-secondary inv-filter-btn" onclick="setInvFilter('pendiente',this)">Pendientes</button>
-            <button class="btn btn-sm btn-secondary inv-filter-btn" onclick="setInvFilter('por_vencer',this)" style="color:var(--orange);">Por Vencer</button>
-            <button class="btn btn-sm btn-secondary inv-filter-btn" onclick="setInvFilter('vencida',this)">Vencidas</button>
-            <button class="btn btn-sm btn-secondary inv-filter-btn" onclick="setInvFilter('pagada',this)">Pagadas</button>
+        <div style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;align-items:center;gap:10px;">
+          <h3 style="font-size:14px;font-weight:600;margin-right:4px;">Listado de Facturas</h3>
+          <!-- Date range presets -->
+          <div class="flex" style="gap:4px;flex-wrap:wrap;">
+            <button class="btn btn-sm btn-secondary inv-range-btn active" onclick="setInvRange('all',this)">Todos</button>
+            <button class="btn btn-sm btn-secondary inv-range-btn" onclick="setInvRange('today',this)">Hoy</button>
+            <button class="btn btn-sm btn-secondary inv-range-btn" onclick="setInvRange('week',this)">Esta semana</button>
+            <button class="btn btn-sm btn-secondary inv-range-btn" onclick="setInvRange('month',this)">Este mes</button>
+            <button class="btn btn-sm btn-secondary inv-range-btn" onclick="setInvRange('year',this)">Este año</button>
+            <button class="btn btn-sm btn-secondary inv-range-btn" onclick="setInvRange('5years',this)">Últimos 5 años</button>
+            <button class="btn btn-sm btn-secondary inv-range-btn" onclick="setInvRange('custom',this)">Personalizado</button>
           </div>
+          <!-- Custom date inputs (hidden unless custom selected) -->
+          <div id="inv-custom-range" style="display:none;align-items:center;gap:6px;" class="flex">
+            <input type="date" id="inv-range-from" onchange="renderInvoices()" style="width:140px;font-size:12px;padding:5px 8px;">
+            <span style="color:var(--text2);font-size:12px;">—</span>
+            <input type="date" id="inv-range-to" onchange="renderInvoices()" style="width:140px;font-size:12px;padding:5px 8px;">
+          </div>
+        </div>
+        <!-- Status filters -->
+        <div style="padding:10px 16px;border-bottom:1px solid var(--border);display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+          <span style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-right:4px;">Estado:</span>
+          <button class="btn btn-sm btn-secondary inv-filter-btn active" onclick="setInvFilter('all',this)">Todas</button>
+          <button class="btn btn-sm btn-secondary inv-filter-btn" onclick="setInvFilter('pendiente',this)">Pendientes</button>
+          <button class="btn btn-sm btn-secondary inv-filter-btn" onclick="setInvFilter('por_vencer',this)" style="color:var(--orange);">Por Vencer</button>
+          <button class="btn btn-sm btn-secondary inv-filter-btn" onclick="setInvFilter('vencida',this)">Vencidas</button>
+          <button class="btn btn-sm btn-secondary inv-filter-btn" onclick="setInvFilter('pagada',this)">Pagadas</button>
         </div>
         <div style="overflow-x:auto;">
           <table id="inv-table">
@@ -3303,12 +3321,70 @@ function renderMonthlySummary() {
 // INVOICES
 // ============================================================
 let invFilter = 'all';
+let invDateRange = 'all';
 
 function setInvFilter(f, btn) {
   invFilter = f;
   document.querySelectorAll('.inv-filter-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   renderInvoices();
+}
+
+function setInvRange(r, btn) {
+  invDateRange = r;
+  document.querySelectorAll('.inv-range-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const customEl = document.getElementById('inv-custom-range');
+  if (customEl) customEl.style.display = r==='custom' ? 'flex' : 'none';
+  renderInvoices();
+}
+
+// Returns {from: Date|null, to: Date|null} for the current range preset
+function getDateRangeBounds() {
+  const now = new Date(); now.setHours(0,0,0,0);
+  if (invDateRange==='all') return {from:null, to:null};
+  if (invDateRange==='today') {
+    const end = new Date(now); end.setHours(23,59,59,999);
+    return {from:now, to:end};
+  }
+  if (invDateRange==='week') {
+    const start = new Date(now);
+    start.setDate(now.getDate() - now.getDay() + (now.getDay()===0?-6:1)); // Monday
+    const end = new Date(start); end.setDate(start.getDate()+6); end.setHours(23,59,59,999);
+    return {from:start, to:end};
+  }
+  if (invDateRange==='month') {
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end   = new Date(now.getFullYear(), now.getMonth()+1, 0, 23, 59, 59, 999);
+    return {from:start, to:end};
+  }
+  if (invDateRange==='year') {
+    const start = new Date(now.getFullYear(), 0, 1);
+    const end   = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+    return {from:start, to:end};
+  }
+  if (invDateRange==='5years') {
+    const start = new Date(now.getFullYear()-5, 0, 1);
+    const end   = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+    return {from:start, to:end};
+  }
+  if (invDateRange==='custom') {
+    const fromVal = document.getElementById('inv-range-from')?.value;
+    const toVal   = document.getElementById('inv-range-to')?.value;
+    const from = fromVal ? new Date(fromVal) : null;
+    const to   = toVal   ? new Date(toVal + 'T23:59:59') : null;
+    return {from, to};
+  }
+  return {from:null, to:null};
+}
+
+function invoiceInRange(inv) {
+  const {from, to} = getDateRangeBounds();
+  if (!from && !to) return true;
+  const d = new Date(inv.date);
+  if (from && d < from) return false;
+  if (to   && d > to)   return false;
+  return true;
 }
 
 function addInvoice() {
@@ -3366,11 +3442,13 @@ function renderInvoices() {
   document.getElementById('inv-total-overdue').textContent  = fmtEur(overdue);
   document.getElementById('inv-total-all').textContent      = fmtEur(paid+pending+upcoming+overdue);
 
-  // filter
-  const list = invFilter==='all' ? all : all.filter(i=>i.status===invFilter);
+  // filter by status + date range (combined)
+  const list = all.filter(i =>
+    (invFilter==='all' || i.status===invFilter) && invoiceInRange(i)
+  );
   const tbody = document.getElementById('inv-tbody');
   if (!list.length) {
-    tbody.innerHTML = '<tr><td colspan="8" class="text-muted" style="text-align:center;padding:24px;">Sin facturas en este estado</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="text-muted" style="text-align:center;padding:24px;">Sin facturas para los filtros seleccionados</td></tr>';
     return;
   }
 
