@@ -757,8 +757,12 @@ select option{background:var(--bg3);}
 
     <!-- MONTHLY SUMMARY -->
     <div id="fin-monthly" style="display:none">
+      <div style="background:rgba(99,102,241,.07);border:1px solid rgba(99,102,241,.2);border-radius:10px;padding:14px 18px;margin-bottom:20px;font-size:13px;color:var(--text2);line-height:1.7;">
+        <p>El Resumen Mensual muestra tu actividad comercial histórica mes a mes: cuánto has ingresado, gastado y ganado en cada período. Estos datos vienen automáticamente de tu tabla de Profit Diario.</p>
+        <p style="margin-top:10px;color:var(--yellow);">⚠️ Este apartado no tiene relación con la Liquidez. El Resumen Mensual refleja tu rendimiento comercial, mientras que la Liquidez muestra el dinero real que tienes ahora mismo en tus cuentas. Un buen profit mensual no significa necesariamente tener ese dinero disponible, ya que puede estar reinvertido en stock, publicidad u otros gastos.</p>
+      </div>
       <div class="chart-wrap mb24">
-        <h3>Profit Mensual Histórico</h3>
+        <h3 style="display:flex;align-items:center;gap:6px;">Profit Mensual Histórico<span class="tooltip-icon" data-tip="Historial de tu actividad comercial por mes. No confundir con Liquidez, que muestra el dinero real disponible en tus cuentas.">?</span></h3>
         <div class="chart-container"><canvas id="monthlyChart"></canvas></div>
       </div>
       <div class="table-wrap">
