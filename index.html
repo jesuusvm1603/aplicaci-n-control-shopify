@@ -845,14 +845,15 @@ select option{background:var(--bg3);}
         <div style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;align-items:center;gap:10px;">
           <h3 style="font-size:14px;font-weight:600;margin-right:4px;">Listado de Facturas</h3>
           <!-- Date range presets -->
-          <div class="flex" style="gap:4px;flex-wrap:wrap;">
+          <div class="flex" style="gap:4px;flex-wrap:wrap;align-items:center;">
             <button class="btn btn-sm btn-secondary inv-range-btn active" onclick="setInvRange('all',this)">Todos</button>
             <button class="btn btn-sm btn-secondary inv-range-btn" onclick="setInvRange('today',this)">Hoy</button>
-            <button class="btn btn-sm btn-secondary inv-range-btn" onclick="setInvRange('week',this)">Esta semana</button>
-            <button class="btn btn-sm btn-secondary inv-range-btn" onclick="setInvRange('month',this)">Este mes</button>
-            <button class="btn btn-sm btn-secondary inv-range-btn" onclick="setInvRange('year',this)">Este año</button>
+            <button class="btn btn-sm btn-secondary inv-range-btn" onclick="setInvRange('7d',this)">Últimos 7 días</button>
+            <button class="btn btn-sm btn-secondary inv-range-btn" onclick="setInvRange('30d',this)">Últimos 30 días</button>
+            <button class="btn btn-sm btn-secondary inv-range-btn" onclick="setInvRange('365d',this)">Últimos 365 días</button>
             <button class="btn btn-sm btn-secondary inv-range-btn" onclick="setInvRange('5years',this)">Últimos 5 años</button>
             <button class="btn btn-sm btn-secondary inv-range-btn" onclick="setInvRange('custom',this)">Personalizado</button>
+            <span class="tooltip-icon" data-tip="Los totales de arriba se actualizan automáticamente según el rango de fechas que selecciones. Por ejemplo, si seleccionas 'Últimos 30 días' verás únicamente los totales de las facturas creadas en ese período.">?</span>
           </div>
           <!-- Custom date inputs (hidden unless custom selected) -->
           <div id="inv-custom-range" style="display:none;align-items:center;gap:6px;" class="flex">
@@ -3343,33 +3344,18 @@ function setInvRange(r, btn) {
 
 // Returns {from: Date|null, to: Date|null} for the current range preset
 function getDateRangeBounds() {
-  const now = new Date(); now.setHours(0,0,0,0);
-  if (invDateRange==='all') return {from:null, to:null};
-  if (invDateRange==='today') {
-    const end = new Date(now); end.setHours(23,59,59,999);
-    return {from:now, to:end};
-  }
-  if (invDateRange==='week') {
-    const start = new Date(now);
-    start.setDate(now.getDate() - now.getDay() + (now.getDay()===0?-6:1)); // Monday
-    const end = new Date(start); end.setDate(start.getDate()+6); end.setHours(23,59,59,999);
-    return {from:start, to:end};
-  }
-  if (invDateRange==='month') {
-    const start = new Date(now.getFullYear(), now.getMonth(), 1);
-    const end   = new Date(now.getFullYear(), now.getMonth()+1, 0, 23, 59, 59, 999);
-    return {from:start, to:end};
-  }
-  if (invDateRange==='year') {
-    const start = new Date(now.getFullYear(), 0, 1);
-    const end   = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
-    return {from:start, to:end};
-  }
-  if (invDateRange==='5years') {
-    const start = new Date(now.getFullYear()-5, 0, 1);
-    const end   = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
-    return {from:start, to:end};
-  }
+  const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+  const todayEnd   = new Date(); todayEnd.setHours(23,59,59,999);
+
+  // Helper: N rolling days back from start of today
+  const daysBack = n => { const d = new Date(todayStart); d.setDate(d.getDate() - n); return d; };
+
+  if (invDateRange==='all')    return {from:null, to:null};
+  if (invDateRange==='today')  return {from:todayStart, to:todayEnd};
+  if (invDateRange==='7d')     return {from:daysBack(6),   to:todayEnd};
+  if (invDateRange==='30d')    return {from:daysBack(29),  to:todayEnd};
+  if (invDateRange==='365d')   return {from:daysBack(364), to:todayEnd};
+  if (invDateRange==='5years') return {from:daysBack(365*5), to:todayEnd};
   if (invDateRange==='custom') {
     const fromVal = document.getElementById('inv-range-from')?.value;
     const toVal   = document.getElementById('inv-range-to')?.value;
