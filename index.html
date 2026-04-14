@@ -623,6 +623,7 @@ select option{background:var(--bg3);}
       <div class="tab active" onclick="financeTab('daily')">Profit Diario</div>
       <div class="tab" onclick="financeTab('fixed')">Costes Fijos</div>
       <div class="tab" onclick="financeTab('liquidity')">Liquidez</div>
+      <div class="tab" onclick="financeTab('invoices')">Facturas</div>
       <div class="tab" onclick="financeTab('monthly')">Resumen Mensual</div>
     </div>
 
@@ -713,7 +714,7 @@ select option{background:var(--bg3);}
           <div id="illiquid-funds"></div>
           <div class="mt16">
             <div class="form-group mb8">
-              <label>Facturas Pendientes €</label>
+              <label>Facturas adicionales € <span style="font-size:11px;color:var(--text2);">(las del módulo Facturas se suman automáticamente)</span></label>
               <input type="number" id="liq-invoices" placeholder="0.00" oninput="calcLiquidity()">
             </div>
             <div class="form-group">
@@ -759,6 +760,85 @@ select option{background:var(--bg3);}
             <div class="card-label-row" style="justify-content:center;"><span class="card-label">Patrimonio Neto</span><span class="tooltip-icon" data-tip="Tu riqueza total real: todo tu dinero menos todas tus deudas">?</span></div>
             <div class="card-value" id="liq-net">€0</div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- INVOICES -->
+    <div id="fin-invoices" style="display:none">
+      <div style="background:rgba(99,102,241,.07);border:1px solid rgba(99,102,241,.2);border-radius:10px;padding:14px 18px;margin-bottom:20px;font-size:13px;color:var(--text2);line-height:1.7;">
+        Aquí puedes registrar y controlar todas tus facturas. Las facturas pendientes y vencidas se descuentan automáticamente de tu liquidez disponible para darte una imagen real de tu situación financiera.
+      </div>
+
+      <!-- Summary cards -->
+      <div class="cards-grid mb16" id="inv-summary-cards">
+        <div class="card"><div class="card-label">Total Pagado</div><div class="card-value text-green" id="inv-total-paid">€0</div></div>
+        <div class="card"><div class="card-label">Total Pendiente</div><div class="card-value text-yellow" id="inv-total-pending">€0</div></div>
+        <div class="card"><div class="card-label">Total Vencido</div><div class="card-value text-red" id="inv-total-overdue">€0</div></div>
+        <div class="card"><div class="card-label">Total General</div><div class="card-value" id="inv-total-all">€0</div></div>
+      </div>
+
+      <!-- Add invoice form -->
+      <div class="form-panel mb16">
+        <h3>Nueva Factura</h3>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Fecha</label>
+            <input type="date" id="inv-date">
+          </div>
+          <div class="form-group">
+            <label>Concepto / Descripción</label>
+            <input type="text" id="inv-concept" placeholder="Ej: Compra de stock">
+          </div>
+          <div class="form-group">
+            <label>Proveedor o Empresa</label>
+            <input type="text" id="inv-supplier" placeholder="Ej: Alibaba">
+          </div>
+          <div class="form-group">
+            <label>Importe €</label>
+            <input type="number" id="inv-amount" placeholder="0.00" step="0.01">
+          </div>
+          <div class="form-group">
+            <label>Estado</label>
+            <select id="inv-status">
+              <option value="pendiente">Pendiente</option>
+              <option value="pagada">Pagada</option>
+              <option value="vencida">Vencida</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Fecha de Vencimiento</label>
+            <input type="date" id="inv-due">
+          </div>
+          <div class="form-group" style="grid-column:1/-1">
+            <label>Notas (opcional)</label>
+            <input type="text" id="inv-notes" placeholder="Notas adicionales...">
+          </div>
+        </div>
+        <div class="flex mt16 gap8">
+          <button class="btn btn-primary btn-sm" onclick="addInvoice()">+ Añadir Factura</button>
+        </div>
+      </div>
+
+      <!-- Filter + table -->
+      <div class="table-wrap">
+        <div class="table-header flex-between">
+          <h3>Listado de Facturas</h3>
+          <div class="flex" style="gap:6px;">
+            <button class="btn btn-sm btn-secondary inv-filter-btn active" onclick="setInvFilter('all',this)">Todas</button>
+            <button class="btn btn-sm btn-secondary inv-filter-btn" onclick="setInvFilter('pendiente',this)">Pendientes</button>
+            <button class="btn btn-sm btn-secondary inv-filter-btn" onclick="setInvFilter('pagada',this)">Pagadas</button>
+            <button class="btn btn-sm btn-secondary inv-filter-btn" onclick="setInvFilter('vencida',this)">Vencidas</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto;">
+          <table id="inv-table">
+            <thead><tr>
+              <th>Fecha</th><th>Concepto</th><th>Proveedor</th><th>Importe</th>
+              <th>Vencimiento</th><th>Estado</th><th>Notas</th><th></th>
+            </tr></thead>
+            <tbody id="inv-tbody"></tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -1279,7 +1359,8 @@ function defaultState() {
     finance: {
       daily: {},
       fixedCosts: { team:0, apps:0, chatgpt:0, creatives:0, banking:0, custom:[] },
-      liquidity: { wise:0, bank:0, shopify:0, cash:0, paypal:0, klarna:0, stripe:0, pendingInvoices:0, debts:0 }
+      liquidity: { wise:0, bank:0, shopify:0, cash:0, paypal:0, klarna:0, stripe:0, pendingInvoices:0, debts:0 },
+      invoices: []
     },
     csvData: [],
     lastSync: null,
@@ -2804,14 +2885,15 @@ function applyCSVToFinance() {
 // FINANCE
 // ============================================================
 function financeTab(tab) {
-  ['daily','fixed','liquidity','monthly'].forEach(t => {
+  const tabs2 = ['daily','fixed','liquidity','invoices','monthly'];
+  tabs2.forEach(t => {
     document.getElementById('fin-'+t).style.display = t===tab?'block':'none';
-    document.querySelectorAll('.tabs .tab').forEach((el,i) => {
-      const tabs2 = ['daily','fixed','liquidity','monthly'];
-      el.classList.toggle('active', tabs2[i]===tab);
-    });
+  });
+  document.querySelectorAll('.tabs .tab').forEach((el,i) => {
+    el.classList.toggle('active', tabs2[i]===tab);
   });
   if (tab==='monthly') renderMonthlySummary();
+  if (tab==='invoices') renderInvoices();
 }
 
 function getDailyFixedCost() {
@@ -3066,11 +3148,17 @@ function renderLiquidity() {
   calcLiquidity();
 }
 
+function getInvoicesDebt() {
+  return (state.finance.invoices||[])
+    .filter(i=>i.status==='pendiente'||i.status==='vencida')
+    .reduce((s,i)=>s+(+i.amount||0),0);
+}
+
 function calcLiquidity() {
   const get = id => parseFloat(document.getElementById(id)?.value||0)||0;
   const liquid = get('liq-wise')+get('liq-bank')+get('liq-shopify')+get('liq-cash');
   const illiquid = get('liq-paypal')+get('liq-klarna')+get('liq-stripe');
-  const invoices = get('liq-invoices');
+  const invoices = getInvoicesDebt() + get('liq-invoices');
   const debts = get('liq-debts');
   const net = liquid + illiquid - invoices - debts;
   const available = liquid - invoices - debts;
@@ -3144,6 +3232,97 @@ function renderMonthlySummary() {
       scales:{x:{ticks:{color:'#94a3b8'},grid:{color:'rgba(255,255,255,.05)'}},y:{ticks:{color:'#94a3b8'},grid:{color:'rgba(255,255,255,.05)'}}}
     }
   });
+}
+
+// ============================================================
+// INVOICES
+// ============================================================
+let invFilter = 'all';
+
+function setInvFilter(f, btn) {
+  invFilter = f;
+  document.querySelectorAll('.inv-filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderInvoices();
+}
+
+function addInvoice() {
+  const concept  = document.getElementById('inv-concept').value.trim();
+  const amount   = parseFloat(document.getElementById('inv-amount').value)||0;
+  if (!concept) { alert('Introduce un concepto para la factura.'); return; }
+  if (!amount)  { alert('Introduce un importe válido.'); return; }
+  if (!state.finance.invoices) state.finance.invoices = [];
+  state.finance.invoices.push({
+    id:       Date.now(),
+    date:     document.getElementById('inv-date').value || today(),
+    concept,
+    supplier: document.getElementById('inv-supplier').value.trim(),
+    amount,
+    status:   document.getElementById('inv-status').value,
+    dueDate:  document.getElementById('inv-due').value,
+    notes:    document.getElementById('inv-notes').value.trim()
+  });
+  // reset form
+  ['inv-concept','inv-supplier','inv-amount','inv-notes','inv-due'].forEach(id=>{
+    document.getElementById(id).value='';
+  });
+  document.getElementById('inv-date').value = today();
+  document.getElementById('inv-status').value = 'pendiente';
+  saveState();
+  renderInvoices();
+  calcLiquidity();
+}
+
+function deleteInvoice(id) {
+  if (!confirm('¿Eliminar esta factura?')) return;
+  state.finance.invoices = (state.finance.invoices||[]).filter(i=>i.id!==id);
+  saveState();
+  renderInvoices();
+  calcLiquidity();
+}
+
+function changeInvoiceStatus(id, newStatus) {
+  const inv = (state.finance.invoices||[]).find(i=>i.id===id);
+  if (inv) { inv.status = newStatus; saveState(); renderInvoices(); calcLiquidity(); }
+}
+
+function renderInvoices() {
+  const all = state.finance.invoices || [];
+  // summary
+  const paid    = all.filter(i=>i.status==='pagada').reduce((s,i)=>s+(+i.amount||0),0);
+  const pending = all.filter(i=>i.status==='pendiente').reduce((s,i)=>s+(+i.amount||0),0);
+  const overdue = all.filter(i=>i.status==='vencida').reduce((s,i)=>s+(+i.amount||0),0);
+  document.getElementById('inv-total-paid').textContent    = fmtEur(paid);
+  document.getElementById('inv-total-pending').textContent = fmtEur(pending);
+  document.getElementById('inv-total-overdue').textContent = fmtEur(overdue);
+  document.getElementById('inv-total-all').textContent     = fmtEur(paid+pending+overdue);
+
+  // filter
+  const list = invFilter==='all' ? all : all.filter(i=>i.status===invFilter);
+  const tbody = document.getElementById('inv-tbody');
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="text-muted" style="text-align:center;padding:24px;">Sin facturas</td></tr>';
+    return;
+  }
+  const statusLabel = { pendiente:'<span class="badge badge-yellow">Pendiente</span>', pagada:'<span class="badge badge-green">Pagada</span>', vencida:'<span class="badge badge-red">Vencida</span>' };
+  const nextStatus  = { pendiente:'pagada', pagada:'pendiente', vencida:'pagada' };
+  const btnLabel    = { pendiente:'Marcar pagada', pagada:'Marcar pendiente', vencida:'Marcar pagada' };
+  tbody.innerHTML = list.map(i=>`
+    <tr style="${i.status==='vencida'?'background:rgba(239,68,68,.06);':''}">
+      <td>${i.date}</td>
+      <td style="font-weight:600;">${i.concept}</td>
+      <td>${i.supplier||'—'}</td>
+      <td style="font-weight:700;${i.status==='vencida'?'color:var(--red)':i.status==='pagada'?'color:var(--green)':'color:var(--yellow)'}">${fmtEur(+i.amount||0)}</td>
+      <td>${i.dueDate||'—'}</td>
+      <td>${statusLabel[i.status]||i.status}</td>
+      <td style="font-size:12px;color:var(--text2);">${i.notes||'—'}</td>
+      <td>
+        <div class="flex" style="gap:4px;">
+          <button class="btn btn-sm btn-secondary" style="font-size:11px;padding:3px 7px;" onclick="changeInvoiceStatus(${i.id},'${nextStatus[i.status]}')">${btnLabel[i.status]}</button>
+          <button class="btn btn-sm btn-danger" style="font-size:11px;padding:3px 7px;" onclick="deleteInvoice(${i.id})">✕</button>
+        </div>
+      </td>
+    </tr>`).join('');
 }
 
 // ============================================================
