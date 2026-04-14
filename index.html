@@ -179,15 +179,31 @@ select option{background:var(--bg3);}
 
 /* FINANCE TABLE */
 .finance-table-wrap{overflow-x:auto;}
-.finance-table td input{background:transparent;border:none;padding:4px;width:80px;color:var(--text);}
+.finance-table th{padding:7px 6px;font-size:10px;}
+.finance-table td{padding:6px 6px;font-size:12px;}
+.finance-table td input{background:transparent;border:none;padding:3px;width:62px;color:var(--text);font-size:12px;}
 .finance-table td input:focus{background:var(--bg3);border-radius:4px;}
 .total-row td{background:var(--bg3);font-weight:700;color:var(--accent2);}
+/* FULLSCREEN TABLE */
+.finance-table-wrap.fullscreen{position:fixed;inset:0;z-index:800;background:var(--bg);padding:20px;overflow:auto;border-radius:0;border:none;}
+.finance-table-wrap.fullscreen .fs-exit-btn{display:inline-flex;}
+.fs-exit-btn{display:none;position:sticky;top:0;float:right;margin-bottom:10px;z-index:1;}
+/* LIQUIDITY CARDS LAYOUT */
+.liq-cards-layout{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:16px;align-items:start;}
+.liq-block{display:flex;flex-direction:column;gap:12px;}
+.liq-net-card{padding:24px 20px;text-align:center;}
+.liq-net-card .card-label{font-size:12px;margin-bottom:12px;}
+.liq-net-card .card-value{font-size:32px;}
+.card-label-row{display:flex;align-items:center;gap:5px;margin-bottom:8px;}
+.card-label-row .card-label{margin-bottom:0;}
+@media(max-width:900px){.liq-cards-layout{grid-template-columns:1fr 1fr;}.liq-net-card .card-value{font-size:26px;}}
+@media(max-width:600px){.liq-cards-layout{grid-template-columns:1fr;}}
 
-/* TOOLTIP */
+/* TOOLTIP — JS-driven, appended to body so it's never clipped */
 .th-wrap{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;}
-.tooltip-icon{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:rgba(148,163,184,.2);color:var(--text2);font-size:9px;font-weight:700;cursor:help;flex-shrink:0;position:relative;}
-.tooltip-icon:hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#1e2235;border:1px solid var(--border);color:var(--text);font-size:11px;font-weight:400;text-transform:none;letter-spacing:0;padding:6px 10px;border-radius:6px;white-space:nowrap;max-width:260px;white-space:normal;width:max-content;max-width:240px;z-index:999;pointer-events:none;line-height:1.4;box-shadow:0 4px 16px rgba(0,0,0,.4);}
-.tooltip-icon:hover::before{content:'';position:absolute;bottom:calc(100% + 1px);left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:#1e2235;z-index:999;}
+.tooltip-icon{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:rgba(99,102,241,.3);color:#c7d2fe;font-size:9px;font-weight:800;cursor:help;flex-shrink:0;border:1px solid rgba(99,102,241,.5);transition:.15s;}
+.tooltip-icon:hover{background:rgba(99,102,241,.55);color:#fff;}
+#tooltip-popup{position:fixed;z-index:9999;background:#111827;border:1px solid #374151;color:#f1f5f9;font-size:12px;font-weight:400;padding:8px 12px;border-radius:8px;max-width:260px;line-height:1.5;pointer-events:none;display:none;box-shadow:0 6px 24px rgba(0,0,0,.7);text-transform:none;letter-spacing:0;}
 
 /* TABS */
 .tabs{display:flex;gap:4px;background:var(--bg3);border-radius:8px;padding:4px;margin-bottom:20px;width:fit-content;}
@@ -617,9 +633,13 @@ select option{background:var(--bg3);}
           <input type="month" id="fin-month-select" onchange="renderFinanceDaily()">
           <button class="btn btn-secondary btn-sm" onclick="addFinanceDay()">+ Añadir Día</button>
         </div>
-        <span class="text-muted" style="font-size:12px;">Los campos editables: haz clic para editar</span>
+        <div class="flex">
+          <span class="text-muted" style="font-size:12px;">Haz clic en una celda para editar</span>
+          <button class="btn btn-secondary btn-sm" onclick="toggleTableFullscreen()" id="btn-fullscreen" title="Pantalla completa">⛶ Pantalla completa</button>
+        </div>
       </div>
-      <div class="finance-table-wrap table-wrap">
+      <div class="finance-table-wrap table-wrap" id="finance-table-wrap">
+        <button class="btn btn-secondary btn-sm fs-exit-btn" onclick="toggleTableFullscreen()">✕ Salir de pantalla completa</button>
         <table class="finance-table" id="finance-daily-table">
           <thead><tr>
             <th><span class="th-wrap">Fecha<span class="tooltip-icon" data-tip="Día del mes">?</span></span></th>
@@ -696,13 +716,42 @@ select option{background:var(--bg3);}
           <button class="btn btn-secondary btn-sm mt16" onclick="saveLiquidity()">Guardar</button>
         </div>
       </div>
-      <div class="cards-grid mt16">
-        <div class="card"><div class="card-label">Líquido Total</div><div class="card-value text-green" id="liq-total-liquid">€0</div></div>
-        <div class="card"><div class="card-label">No Líquido Total</div><div class="card-value text-yellow" id="liq-total-illiquid">€0</div></div>
-        <div class="card"><div class="card-label">Facturas + Deudas</div><div class="card-value text-red" id="liq-total-debt">€0</div></div>
-        <div class="card"><div class="card-label">Patrimonio Neto</div><div class="card-value" id="liq-net">€0</div></div>
-        <div class="card" id="liq-available-card"><div class="card-label">Dinero Disponible Ahora</div><div class="card-value" id="liq-available">€0</div><div class="card-sub" id="liq-available-warn" style="display:none;color:var(--red);font-size:12px;margin-top:6px;">⚠️ No tienes suficiente líquido para cubrir tus deudas</div></div>
-        <div class="card"><div class="card-label">Dinero por Llegar</div><div class="card-value text-yellow" id="liq-incoming">€0</div><div class="card-sub neutral">(aún no disponible)</div></div>
+      <div class="liq-cards-layout">
+        <!-- Bloque 1: Base -->
+        <div class="liq-block">
+          <div class="card">
+            <div class="card-label-row"><span class="card-label">Líquido Total</span><span class="tooltip-icon" data-tip="Dinero que tienes disponible ahora mismo en tus cuentas">?</span></div>
+            <div class="card-value text-green" id="liq-total-liquid">€0</div>
+          </div>
+          <div class="card">
+            <div class="card-label-row"><span class="card-label">No Líquido Total</span><span class="tooltip-icon" data-tip="Dinero tuyo que está retenido y aún no puedes usar">?</span></div>
+            <div class="card-value text-yellow" id="liq-total-illiquid">€0</div>
+          </div>
+          <div class="card">
+            <div class="card-label-row"><span class="card-label">Facturas + Deudas</span><span class="tooltip-icon" data-tip="Total de pagos pendientes que debes realizar">?</span></div>
+            <div class="card-value text-red" id="liq-total-debt">€0</div>
+          </div>
+        </div>
+        <!-- Bloque 2: Disponibilidad -->
+        <div class="liq-block">
+          <div class="card" id="liq-available-card">
+            <div class="card-label-row"><span class="card-label">Dinero Disponible Ahora</span><span class="tooltip-icon" data-tip="Tu dinero líquido menos lo que debes. Lo que realmente puedes gastar">?</span></div>
+            <div class="card-value" id="liq-available">€0</div>
+            <div class="card-sub" id="liq-available-warn" style="display:none;color:var(--red);font-size:12px;margin-top:6px;">⚠️ No tienes suficiente líquido para cubrir tus deudas</div>
+          </div>
+          <div class="card">
+            <div class="card-label-row"><span class="card-label">Dinero por Llegar</span><span class="tooltip-icon" data-tip="Fondos retenidos en plataformas que recibirás próximamente">?</span></div>
+            <div class="card-value text-yellow" id="liq-incoming">€0</div>
+            <div class="card-sub neutral">(aún no disponible)</div>
+          </div>
+        </div>
+        <!-- Bloque 3: Patrimonio -->
+        <div class="liq-block">
+          <div class="card liq-net-card">
+            <div class="card-label-row" style="justify-content:center;"><span class="card-label">Patrimonio Neto</span><span class="tooltip-icon" data-tip="Tu riqueza total real: todo tu dinero menos todas tus deudas">?</span></div>
+            <div class="card-value" id="liq-net">€0</div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -3084,6 +3133,64 @@ function renderMonthlySummary() {
     }
   });
 }
+
+// ============================================================
+// TOOLTIP SYSTEM — JS floating tooltip, never clipped by overflow
+// ============================================================
+(function(){
+  const tip = document.createElement('div');
+  tip.id = 'tooltip-popup';
+  document.body.appendChild(tip);
+  let activeTarget = null;
+  function show(e) {
+    const icon = e.target.closest('.tooltip-icon');
+    if (!icon) return;
+    const txt = icon.getAttribute('data-tip');
+    if (!txt) return;
+    activeTarget = icon;
+    tip.textContent = txt;
+    tip.style.display = 'block';
+    position(e);
+  }
+  function hide(e) {
+    if (e.target.closest('.tooltip-icon')) { tip.style.display = 'none'; activeTarget = null; }
+  }
+  function move(e) {
+    if (tip.style.display === 'block') position(e);
+  }
+  function position(e) {
+    const pad = 14, vw = window.innerWidth, vh = window.innerHeight;
+    const w = tip.offsetWidth, h = tip.offsetHeight;
+    let x = e.clientX + pad;
+    let y = e.clientY - h - pad;
+    if (y < 8) y = e.clientY + pad;
+    if (x + w > vw - 8) x = e.clientX - w - pad;
+    if (x < 8) x = 8;
+    tip.style.left = x + 'px';
+    tip.style.top = y + 'px';
+  }
+  document.addEventListener('mouseover', show);
+  document.addEventListener('mouseout', hide);
+  document.addEventListener('mousemove', move);
+})();
+
+// ============================================================
+// FULLSCREEN TABLE TOGGLE
+// ============================================================
+function toggleTableFullscreen(forceOff) {
+  const wrap = document.getElementById('finance-table-wrap');
+  const btn = document.getElementById('btn-fullscreen');
+  const isFs = forceOff ? false : wrap.classList.toggle('fullscreen');
+  if (forceOff) wrap.classList.remove('fullscreen');
+  btn.textContent = isFs ? '✕ Salir de pantalla completa' : '⛶ Pantalla completa';
+  document.body.style.overflow = isFs ? 'hidden' : '';
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    const wrap = document.getElementById('finance-table-wrap');
+    if (wrap && wrap.classList.contains('fullscreen')) toggleTableFullscreen(true);
+  }
+});
 
 // ============================================================
 // INIT
