@@ -210,6 +210,8 @@ select option{background:var(--bg3);}
 .tabs{display:flex;gap:4px;background:var(--bg3);border-radius:8px;padding:4px;margin-bottom:20px;width:fit-content;}
 .tab{padding:7px 16px;border-radius:6px;cursor:pointer;font-size:13px;color:var(--text2);transition:.2s;}
 .tab.active{background:var(--accent);color:#fff;}
+/* Invoice filter buttons active state */
+.inv-filter-btn.active,.inv-range-btn.active{background:var(--accent)!important;color:#fff!important;border-color:var(--accent)!important;}
 
 /* SEARCH BAR */
 .search-row{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
@@ -864,7 +866,7 @@ select option{background:var(--bg3);}
           <span style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-right:4px;">Estado:</span>
           <button class="btn btn-sm btn-secondary inv-filter-btn active" onclick="setInvFilter('all',this)">Todas</button>
           <button class="btn btn-sm btn-secondary inv-filter-btn" onclick="setInvFilter('pendiente',this)">Pendientes</button>
-          <button class="btn btn-sm btn-secondary inv-filter-btn" onclick="setInvFilter('por_vencer',this)" style="color:var(--orange);">Por Vencer</button>
+          <button class="btn btn-sm btn-secondary inv-filter-btn" onclick="setInvFilter('por_vencer',this)">Por Vencer</button>
           <button class="btn btn-sm btn-secondary inv-filter-btn" onclick="setInvFilter('vencida',this)">Vencidas</button>
           <button class="btn btn-sm btn-secondary inv-filter-btn" onclick="setInvFilter('pagada',this)">Pagadas</button>
         </div>
@@ -3431,11 +3433,12 @@ function renderInvoices() {
   autoUpdateInvoiceStatuses();
   const all = state.finance.invoices || [];
 
-  // summary totals
-  const paid     = all.filter(i=>i.status==='pagada').reduce((s,i)=>s+(+i.amount||0),0);
-  const pending  = all.filter(i=>i.status==='pendiente').reduce((s,i)=>s+(+i.amount||0),0);
-  const upcoming = all.filter(i=>i.status==='por_vencer').reduce((s,i)=>s+(+i.amount||0),0);
-  const overdue  = all.filter(i=>i.status==='vencida').reduce((s,i)=>s+(+i.amount||0),0);
+  // summary totals — respect active date range
+  const inRange  = all.filter(invoiceInRange);
+  const paid     = inRange.filter(i=>i.status==='pagada').reduce((s,i)=>s+(+i.amount||0),0);
+  const pending  = inRange.filter(i=>i.status==='pendiente').reduce((s,i)=>s+(+i.amount||0),0);
+  const upcoming = inRange.filter(i=>i.status==='por_vencer').reduce((s,i)=>s+(+i.amount||0),0);
+  const overdue  = inRange.filter(i=>i.status==='vencida').reduce((s,i)=>s+(+i.amount||0),0);
   document.getElementById('inv-total-paid').textContent     = fmtEur(paid);
   document.getElementById('inv-total-pending').textContent  = fmtEur(pending);
   document.getElementById('inv-total-upcoming').textContent = fmtEur(upcoming);
