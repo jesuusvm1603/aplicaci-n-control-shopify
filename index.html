@@ -180,10 +180,13 @@ select option{background:var(--bg3);}
 
 /* FINANCE TABLE */
 .finance-table-wrap{overflow-x:auto;}
-.finance-table th{padding:7px 6px;font-size:10px;}
-.finance-table td{padding:6px 6px;font-size:12px;}
-.finance-table td input{background:transparent;border:none;padding:3px;width:62px;color:var(--text);font-size:12px;}
+.finance-table th{padding:4px 4px;font-size:10px;white-space:nowrap;}
+.finance-table td{padding:3px 4px;font-size:11px;vertical-align:middle;}
+.finance-table td input{background:transparent;border:none;padding:2px;width:50px;color:var(--text);font-size:11px;}
 .finance-table td input:focus{background:var(--bg3);border-radius:4px;}
+.finance-table .auto-cell{display:flex;flex-direction:column;gap:1px;}
+.finance-table .auto-cell b{font-size:11px;}
+.finance-table .auto-cell .auto-tag{font-size:9px;color:var(--accent2);}
 .total-row td{background:var(--bg3);font-weight:700;color:var(--accent2);}
 /* FULLSCREEN TABLE */
 .finance-table-wrap.fullscreen{position:fixed;inset:0;z-index:800;background:var(--bg);padding:20px;overflow:auto;border-radius:0;border:none;}
@@ -547,23 +550,12 @@ select option{background:var(--bg3);}
     <div class="page-header flex-between">
       <div>
         <h1>Testing de Creativos</h1>
-        <p>Seguimiento de rendimiento por creativo</p>
+        <p>Organiza tus tests por campaña</p>
       </div>
-      <button class="btn btn-primary" onclick="openCreativeModal()">+ Nuevo Creativo</button>
-    </div>
-    <div class="search-row">
-      <input type="text" id="test-search" placeholder="Buscar creativo..." oninput="renderTesting()">
-      <select id="test-filter-status" onchange="renderTesting()">
-        <option value="">Todos los estados</option>
-        <option value="en test">En test</option>
-        <option value="ganador">Ganador</option>
-        <option value="pausado">Pausado</option>
-      </select>
-      <select id="test-filter-product" onchange="renderTesting()">
-        <option value="">Todos los productos</option>
-      </select>
+      <button class="btn btn-primary" onclick="openTestCampaignModal()">+ Nueva Campaña</button>
     </div>
     <div id="testing-stats" style="margin-bottom:16px;"></div>
+    <div id="testing-filters" style="margin-bottom:16px;"></div>
     <div id="testing-list"></div>
   </div>
 
@@ -663,8 +655,7 @@ select option{background:var(--bg3);}
             <th><span class="th-wrap">Meta Ads<span class="tooltip-icon" data-tip="Gasto total en publicidad de Meta (Facebook e Instagram) ese día">?</span></span></th>
             <th><span class="th-wrap">Ads%<span class="tooltip-icon" data-tip="Porcentaje que representa el gasto en ads sobre los ingresos">?</span></span></th>
             <th><span class="th-wrap">Com.3%<span class="tooltip-icon" data-tip="Comisión del 3% sobre ingresos (comisiones de pasarela de pago)">?</span></span></th>
-            <th><span class="th-wrap">Com.6%<span class="tooltip-icon" data-tip="Comisión del 6% sobre ingresos (referencia alternativa)">?</span></span></th>
-            <th><span class="th-wrap">CF Día<span class="tooltip-icon" data-tip="Coste Fijo del día — total de costes fijos mensuales dividido entre 30">?</span></span></th>
+            <th><span class="th-wrap">CF/d<span class="tooltip-icon" data-tip="Coste Fijo del día — total de costes fijos mensuales dividido entre 30">?</span></span></th>
             <th><span class="th-wrap">Profit<span class="tooltip-icon" data-tip="Beneficio neto del día (Ingresos - COGS - Meta Ads - COM.3% - CF Día)">?</span></span></th>
             <th><span class="th-wrap">ROAS<span class="tooltip-icon" data-tip="Return on Ad Spend — retorno de inversión publicitaria (Ingresos / Meta Ads)">?</span></span></th>
             <th><span class="th-wrap">Profit%<span class="tooltip-icon" data-tip="Porcentaje de beneficio neto sobre ingresos totales">?</span></span></th>
@@ -1042,23 +1033,12 @@ select option{background:var(--bg3);}
     </div>
     <div class="modal-body">
       <input type="hidden" id="cm-id">
+      <input type="hidden" id="cm-campaign-id">
+      <div id="cm-campaign-info" style="padding:8px 12px;background:var(--bg3);border-radius:6px;margin-bottom:12px;font-size:13px;color:var(--text2);"></div>
       <div class="form-grid">
         <div class="form-group" style="grid-column:1/-1">
           <label>Nombre del Creativo</label>
           <input type="text" id="cm-name" placeholder="ej: Vestido_Negro_V1">
-        </div>
-        <div class="form-group">
-          <label>Producto Vinculado</label>
-          <select id="cm-product"></select>
-        </div>
-        <div class="form-group">
-          <label>Plataforma</label>
-          <select id="cm-platform">
-            <option value="Facebook">Facebook</option>
-            <option value="Instagram">Instagram</option>
-            <option value="Facebook+Instagram">Facebook + Instagram</option>
-            <option value="TikTok">TikTok</option>
-          </select>
         </div>
         <div class="form-group">
           <label>Formato</label>
@@ -1067,6 +1047,7 @@ select option{background:var(--bg3);}
             <option value="vídeo">Vídeo</option>
             <option value="carrusel">Carrusel</option>
             <option value="stories">Stories</option>
+            <option value="competencia">Competencia</option>
           </select>
         </div>
         <div class="form-group">
@@ -1078,15 +1059,11 @@ select option{background:var(--bg3);}
           <input type="text" id="cm-url" placeholder="https://...">
         </div>
         <div class="form-group">
-          <label>Presupuesto Diario €</label>
-          <input type="number" id="cm-budget" placeholder="0.00" step="0.01">
-        </div>
-        <div class="form-group">
           <label>Estado</label>
           <select id="cm-status">
             <option value="en test">En Test</option>
             <option value="ganador">Ganador</option>
-            <option value="pausado">Pausado</option>
+            <option value="desactivado">Desactivado</option>
           </select>
         </div>
       </div>
@@ -1103,6 +1080,87 @@ select option{background:var(--bg3);}
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('creative-modal')">Cancelar</button>
       <button class="btn btn-primary" onclick="saveCreative()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Test Campaign Modal -->
+<div class="modal-overlay" id="test-campaign-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="test-camp-modal-title">Nueva Campaña de Test</h3>
+      <button class="close-btn" onclick="closeModal('test-campaign-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="tc-id">
+      <div class="form-grid">
+        <div class="form-group" style="grid-column:1/-1">
+          <label>Nombre de la Campaña</label>
+          <input type="text" id="tc-name" placeholder="ej: Vestidos_Verano_Meta_Abril">
+        </div>
+        <div class="form-group">
+          <label>Producto Vinculado</label>
+          <select id="tc-product"></select>
+        </div>
+        <div class="form-group">
+          <label>Plataforma</label>
+          <select id="tc-platform">
+            <option value="Meta Ads">Meta Ads</option>
+            <option value="Google Ads">Google Ads</option>
+            <option value="TikTok Ads">TikTok Ads</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Fecha de Inicio</label>
+          <input type="date" id="tc-start-date">
+        </div>
+        <div class="form-group">
+          <label>Estado</label>
+          <select id="tc-status">
+            <option value="activa">Activa</option>
+            <option value="pausada">Pausada</option>
+            <option value="finalizada">Finalizada</option>
+          </select>
+        </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label>Presupuesto Diario Total €</label>
+          <input type="number" id="tc-budget" placeholder="ej: 50.00" step="0.01" min="0" style="width:100%;padding:8px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text1);font-size:14px;">
+        </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label>Objetivo / Notas</label>
+          <textarea id="tc-objective" placeholder="ej: Testear creativos estáticos con ROAS objetivo > 3" rows="3" style="width:100%;padding:8px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text1);font-size:14px;resize:vertical;"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('test-campaign-modal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveTestCampaign()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Creative Days Detail Modal -->
+<div class="modal-overlay" id="creative-days-modal">
+  <div class="modal" style="max-width:640px;">
+    <div class="modal-header">
+      <div>
+        <h3 id="creative-days-title">Detalle 7 Días</h3>
+        <span id="creative-days-subtitle" style="font-size:12px;color:var(--text2);"></span>
+      </div>
+      <button class="close-btn" onclick="closeModal('creative-days-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="creative-days-stats" style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:16px;padding:12px;background:var(--bg3);border-radius:8px;font-size:13px;"></div>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead><tr><th>Día</th><th>Fecha</th><th>Gasto €</th><th>Ingresos €</th><th>ROAS</th><th>Margen%</th></tr></thead>
+          <tbody id="creative-days-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('creative-days-modal')">Cerrar</button>
+      <button class="btn btn-primary" id="creative-days-edit-btn">✏️ Editar Creativo</button>
     </div>
   </div>
 </div>
@@ -1366,6 +1424,20 @@ function bootApp() {
   document.getElementById('auth-screen').classList.add('hidden');
   // Reload per-user state
   state = loadState();
+  if (!state.testCampaigns) state.testCampaigns = [];
+  // Migrate flat creatives → testCampaigns if needed
+  if (state.creatives && state.creatives.length > 0 && state.testCampaigns.length === 0) {
+    state.testCampaigns.push({
+      id: uid(), name: 'Creativos Importados', productId: '', platform: 'Meta Ads',
+      objective: 'Migrados automáticamente desde la versión anterior', startDate: today(),
+      status: 'activa',
+      creatives: state.creatives.map(c => ({
+        id: c.id, name: c.name, format: c.format||'estático', date: c.date,
+        url: c.url||'', budget: c.budget||0, status: c.status||'en test', days: c.days||[]
+      }))
+    });
+    state.creatives = [];
+  }
   // Always recompute auto fields on boot so they're fresh with current creative/campaign/product data
   syncFinanceFromSales();
   saveState();
@@ -1394,6 +1466,7 @@ function defaultState() {
   return {
     products: [],
     creatives: [],
+    testCampaigns: [],
     campaigns: [],
     returns: [],
     finance: {
@@ -1471,7 +1544,7 @@ function syncFinanceFromSales() {
 
   // Step 3 — creative days: day 0 = launch date, day i = launch + i days
   // Spend/revenue always flow even if no product is linked (COG defaults to 0)
-  state.creatives.forEach(c => {
+  getAllTestCreatives().forEach(c => {
     if (!c.date) return;
     const prod  = getProduct(c.productId);
     const price = prod ? (+prod.price||0) : 0;
@@ -1582,7 +1655,7 @@ function roasBadge(r) {
   return `<span class="badge ${cls}">${fmt(r)}</span>`;
 }
 function statusBadge(s) {
-  const map = {activo:'badge-green',pausado:'badge-yellow',descatalogado:'badge-gray','en test':'badge-blue',ganador:'badge-green',activa:'badge-green',pausada:'badge-yellow',archivada:'badge-gray'};
+  const map = {activo:'badge-green',pausado:'badge-yellow',descatalogado:'badge-gray','en test':'badge-blue',ganador:'badge-green',desactivado:'badge-red',activa:'badge-green',pausada:'badge-yellow',archivada:'badge-gray'};
   return `<span class="badge ${map[s]||'badge-gray'}">${s}</span>`;
 }
 function getProduct(id) { return state.products.find(p=>p.id===id); }
@@ -1601,10 +1674,11 @@ function renderDashboard() {
   const ym = currentMonth();
 
   // ── 1. Creative totals (all creatives, read directly — no finance.daily dependency)
-  const creativeRev    = state.creatives.reduce((s,c) => s + calcCreativeRevenue(c), 0);
-  const creativeSpend  = state.creatives.reduce((s,c) => s + calcCreativeSpend(c),   0);
-  const creativeUnits  = state.creatives.reduce((s,c) => s + calcCreativeUnits(c),   0);
-  const creativeCogs   = state.creatives.reduce((s,c) => {
+  const _allCreatives  = getAllTestCreatives();
+  const creativeRev    = _allCreatives.reduce((s,c) => s + calcCreativeRevenue(c), 0);
+  const creativeSpend  = _allCreatives.reduce((s,c) => s + calcCreativeSpend(c),   0);
+  const creativeUnits  = _allCreatives.reduce((s,c) => s + calcCreativeUnits(c),   0);
+  const creativeCogs   = _allCreatives.reduce((s,c) => {
     const p = getProduct(c.productId);
     return s + calcCreativeUnits(c) * (p ? (+p.cog||0) : 0);
   }, 0);
@@ -1650,7 +1724,7 @@ function renderDashboard() {
   const totalProfit = totalRev - totalCogs - totalAds - com3 - totalCF;
   const roas = totalAds > 0 ? totalRev / totalAds : 0;
   const activeProducts = state.products.filter(p=>p.status==='activo').length;
-  const testCreatives = state.creatives.filter(c=>c.status==='en test').length;
+  const testCreatives = getAllTestCreatives().filter(c=>c.status==='en test').length;
 
   const cards = [
     {label:'Ingresos del Mes',value:fmtEur(totalRev),sub:totalOrders+' pedidos',cls:'neutral'},
@@ -1658,7 +1732,7 @@ function renderDashboard() {
     {label:'ROAS Medio',value:fmt(roas),sub:'Ingresos / Ads',cls:roas>=2?'up':roas>=1?'neutral':'down'},
     {label:'Gasto Meta Ads',value:fmtEur(totalAds),sub:fmtPct(totalRev?totalAds/totalRev*100:0)+' de ingresos',cls:'neutral'},
     {label:'Productos Activos',value:activeProducts,sub:'de '+state.products.length+' totales',cls:'neutral'},
-    {label:'Creativos en Test',value:testCreatives,sub:state.creatives.filter(c=>c.status==='ganador').length+' ganadores',cls:'neutral'},
+    {label:'Creativos en Test',value:testCreatives,sub:getAllTestCreatives().filter(c=>c.status==='ganador').length+' ganadores',cls:'neutral'},
   ];
   document.getElementById('dash-cards').innerHTML = cards.map(c=>`
     <div class="card">
@@ -1764,7 +1838,7 @@ function renderDashboard() {
 
   // Creatives table — show all creatives with data, sorted by ROAS desc
   const ctbody = document.getElementById('dash-creatives-table');
-  const sortedCreatives = [...state.creatives]
+  const sortedCreatives = [...getAllTestCreatives()]
     .filter(c => calcCreativeSpend(c) > 0 || calcCreativeRevenue(c) > 0)
     .sort((a,b) => calcCreativeROAS(b) - calcCreativeROAS(a))
     .slice(0, 8);
@@ -1792,14 +1866,12 @@ function renderDashboard() {
 // SALES HELPERS
 // ============================================================
 function getProductCreativeSales(productId) {
-  // Sum units from all creatives linked to this product
-  return state.creatives
+  return getAllTestCreatives()
     .filter(c => c.productId === productId)
     .reduce((total, c) => {
       const prod = getProduct(productId);
       const price = prod ? (+prod.price||0) : 0;
-      const rev = calcCreativeRevenue(c);
-      return total + calcUnitsFromRev(rev, price);
+      return total + calcUnitsFromRev(calcCreativeRevenue(c), price);
     }, 0);
 }
 
@@ -1840,7 +1912,7 @@ function getProductProfit(productId) {
   const rev = units * (+prod.price||0);
   const cogTotal = units * (+prod.cog||0);
   // Subtract ad spend from linked creatives and campaigns
-  const adSpend = state.creatives
+  const adSpend = getAllTestCreatives()
     .filter(c=>c.productId===productId)
     .reduce((s,c)=>s+calcCreativeSpend(c),0)
     + state.campaigns
@@ -2445,34 +2517,46 @@ function saveProduct() {
 // ============================================================
 // TESTING
 // ============================================================
+function getAllTestCreatives() {
+  return (state.testCampaigns||[]).flatMap(camp =>
+    (camp.creatives||[]).map(c => ({...c, productId: camp.productId, platform: camp.platform}))
+  );
+}
+
+const openCampaigns = new Set();
+let testingSort = 'date-desc';
+let testingFilterStatus = 'all';
+let testingFilterPlatform = 'all';
+let testingFilterProduct = 'all';
+
+function applyTestingFilters() {
+  testingSort           = document.getElementById('testing-sort')?.value || testingSort;
+  testingFilterStatus   = document.getElementById('testing-filter-status')?.value || testingFilterStatus;
+  testingFilterPlatform = document.getElementById('testing-filter-platform')?.value || testingFilterPlatform;
+  testingFilterProduct  = document.getElementById('testing-filter-product')?.value || testingFilterProduct;
+  renderTesting();
+}
+
 function renderTesting() {
-  const search = (document.getElementById('test-search').value||'').toLowerCase();
-  const filterStatus = document.getElementById('test-filter-status').value;
-  const filterProduct = document.getElementById('test-filter-product').value;
+  const allCreatives = getAllTestCreatives();
 
-  // Update product filter dropdown
-  const sel = document.getElementById('test-filter-product');
-  const selVal = sel.value;
-  sel.innerHTML = '<option value="">Todos los productos</option>' +
-    state.products.map(p=>`<option value="${p.id}" ${p.id===selVal?'selected':''}>${p.title}</option>`).join('');
-
-  // ---- Global stats from ALL creatives (not just filtered) ----
-  const allSpend   = state.creatives.reduce((s,c)=>s+calcCreativeSpend(c),0);
-  const allRev     = state.creatives.reduce((s,c)=>s+calcCreativeRevenue(c),0);
-  const allRoas    = allSpend > 0 ? allRev/allSpend : 0;
-  const allUnits   = state.creatives.reduce((s,c)=>s+calcCreativeUnits(c),0);
-  const allCogs    = state.creatives.reduce((s,c)=>{
+  // ---- Global stats ----
+  const allSpend  = allCreatives.reduce((s,c)=>s+calcCreativeSpend(c),0);
+  const allRev    = allCreatives.reduce((s,c)=>s+calcCreativeRevenue(c),0);
+  const allRoas   = allSpend > 0 ? allRev/allSpend : 0;
+  const allUnits  = allCreatives.reduce((s,c)=>s+calcCreativeUnits(c),0);
+  const allCogs   = allCreatives.reduce((s,c)=>{
     const prod = getProduct(c.productId);
-    return s + calcCreativeUnits(c) * (+( prod ? prod.cog : 0)||0);
+    return s + calcCreativeUnits(c) * (prod ? (+prod.cog||0) : 0);
   }, 0);
-  const allProfit  = allRev - allCogs - allSpend;
+  const allProfit = allRev - allCogs - allSpend;
   const statsEl = document.getElementById('testing-stats');
   if (statsEl) {
-    statsEl.innerHTML = state.creatives.length === 0 ? '' : `
+    statsEl.innerHTML = allCreatives.length === 0 ? '' : `
       <div class="cards-grid" style="margin-bottom:0;">
-        <div class="card"><div class="card-label">Gasto Total Creativos</div>
+        <div class="card"><div class="card-label">Gasto Total</div>
           <div class="card-value">${fmtEur(allSpend)}</div>
-          <div class="card-sub neutral">→ auto-sumado a Meta Ads en Finanzas</div></div>
+          <div class="card-sub neutral">→ auto-sumado a Ads en Finanzas</div></div>
         <div class="card"><div class="card-label">Ingresos Totales</div>
           <div class="card-value">${fmtEur(allRev)}</div>
           <div class="card-sub neutral">→ auto-sumado a Ingresos en Finanzas</div></div>
@@ -2488,101 +2572,188 @@ function renderTesting() {
       </div>`;
   }
 
-  let creatives = state.creatives.filter(c => {
-    const matchSearch = !search || c.name.toLowerCase().includes(search);
-    const matchStatus = !filterStatus || c.status === filterStatus;
-    const matchProd = !filterProduct || c.productId === filterProduct;
-    return matchSearch && matchStatus && matchProd;
-  });
+  // ---- Filter panel ----
+  const filtersEl = document.getElementById('testing-filters');
+  if (filtersEl) {
+    const sel = (id,val) => `style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text1);padding:5px 8px;font-size:12px;" id="${id}" onchange="applyTestingFilters()"`;
+    const prodOpts = state.products.map(p=>`<option value="${p.id}" ${testingFilterProduct===p.id?'selected':''}>${p.title}</option>`).join('');
+    filtersEl.innerHTML = `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
+      <span style="font-size:12px;color:var(--text2);font-weight:600;">Ordenar:</span>
+      <select ${sel('testing-sort',testingSort)}>
+        <option value="date-desc" ${testingSort==='date-desc'?'selected':''}>Fecha (reciente)</option>
+        <option value="date-asc"  ${testingSort==='date-asc'?'selected':''}>Fecha (antigua)</option>
+        <option value="name-asc"  ${testingSort==='name-asc'?'selected':''}>Nombre A-Z</option>
+        <option value="name-desc" ${testingSort==='name-desc'?'selected':''}>Nombre Z-A</option>
+        <option value="budget-desc" ${testingSort==='budget-desc'?'selected':''}>Presupuesto (mayor)</option>
+        <option value="budget-asc"  ${testingSort==='budget-asc'?'selected':''}>Presupuesto (menor)</option>
+        <option value="spend-desc"  ${testingSort==='spend-desc'?'selected':''}>Gasto (mayor)</option>
+        <option value="spend-asc"   ${testingSort==='spend-asc'?'selected':''}>Gasto (menor)</option>
+        <option value="rev-desc"    ${testingSort==='rev-desc'?'selected':''}>Ingresos (mayor)</option>
+        <option value="rev-asc"     ${testingSort==='rev-asc'?'selected':''}>Ingresos (menor)</option>
+        <option value="roas-desc"   ${testingSort==='roas-desc'?'selected':''}>ROAS (mayor)</option>
+        <option value="roas-asc"    ${testingSort==='roas-asc'?'selected':''}>ROAS (menor)</option>
+        <option value="creatives-desc" ${testingSort==='creatives-desc'?'selected':''}>Creativos (más)</option>
+        <option value="creatives-asc"  ${testingSort==='creatives-asc'?'selected':''}>Creativos (menos)</option>
+      </select>
+      <span style="font-size:12px;color:var(--text2);font-weight:600;margin-left:6px;">Filtrar:</span>
+      <select ${sel('testing-filter-status',testingFilterStatus)}>
+        <option value="all"       ${testingFilterStatus==='all'?'selected':''}>Todos los estados</option>
+        <option value="activa"    ${testingFilterStatus==='activa'?'selected':''}>Activa</option>
+        <option value="pausada"   ${testingFilterStatus==='pausada'?'selected':''}>Pausada</option>
+        <option value="finalizada"${testingFilterStatus==='finalizada'?'selected':''}>Finalizada</option>
+      </select>
+      <select ${sel('testing-filter-platform',testingFilterPlatform)}>
+        <option value="all"        ${testingFilterPlatform==='all'?'selected':''}>Todas las plataformas</option>
+        <option value="Meta Ads"   ${testingFilterPlatform==='Meta Ads'?'selected':''}>Meta Ads</option>
+        <option value="Google Ads" ${testingFilterPlatform==='Google Ads'?'selected':''}>Google Ads</option>
+        <option value="TikTok Ads" ${testingFilterPlatform==='TikTok Ads'?'selected':''}>TikTok Ads</option>
+      </select>
+      <select ${sel('testing-filter-product',testingFilterProduct)}>
+        <option value="all" ${testingFilterProduct==='all'?'selected':''}>Todos los productos</option>
+        ${prodOpts}
+      </select>
+    </div>`;
+  }
 
   const container = document.getElementById('testing-list');
-  if (!creatives.length) {
-    container.innerHTML = `<div class="empty-state"><div class="empty-icon">🧪</div><p>No hay creativos. Crea uno con "+ Nuevo Creativo".</p></div>`;
+  let campaigns = state.testCampaigns || [];
+  if (!campaigns.length) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">🧪</div><p>No hay campañas. Crea una con "+ Nueva Campaña".</p></div>`;
     return;
   }
 
-  container.innerHTML = creatives.map(c => {
-    const prod = getProduct(c.productId);
-    const totalRoas = calcCreativeROAS(c);
-    const totalSpend = calcCreativeSpend(c);
-    const totalRev = calcCreativeRevenue(c);
-    const totalMargin = calcCreativeMargin(c);
-    const units = calcCreativeUnits(c);
-    const price = prod ? (+prod.price||0) : 0;
-    const cog = prod ? (+prod.cog||0) : 0;
-    const marginEur = price - cog;
-    const marginPct = price > 0 ? marginEur/price*100 : 0;
-    const totalCOG = units * cog;
-    const storeValue = units * price;
-    const roasClass2 = roasClass(totalRoas);
+  // Apply filters
+  if (testingFilterStatus !== 'all')   campaigns = campaigns.filter(x => x.status === testingFilterStatus);
+  if (testingFilterPlatform !== 'all') campaigns = campaigns.filter(x => x.platform === testingFilterPlatform);
+  if (testingFilterProduct !== 'all')  campaigns = campaigns.filter(x => x.productId === testingFilterProduct);
 
-    const daysHtml = (c.days||[]).map((d,i) => {
-      const roas = d.spend > 0 ? d.revenue/d.spend : 0;
-      const mp = price > 0 ? ((d.revenue - d.spend - (calcUnitsFromRev(d.revenue,price)*cog)) / d.revenue * 100) : 0;
-      return `<td class="${roasClass(roas)}">${fmt(roas)}</td><td class="${mp>=0?'text-green':'text-red'}">${fmtPct(mp)}</td>`;
-    }).join('');
-    const emptyDays = Array(Math.max(0,7-(c.days||[]).length)).fill(0).map(()=>'<td class="text-muted">—</td><td class="text-muted">—</td>').join('');
+  // Apply sort (compute metrics for each campaign once)
+  campaigns = campaigns.map(c => {
+    const cr = c.creatives || [];
+    return { ...c, _spend: cr.reduce((s,x)=>s+calcCreativeSpend(x),0), _rev: cr.reduce((s,x)=>s+calcCreativeRevenue(x),0), _n: cr.length };
+  });
+  campaigns.sort((a,b) => {
+    switch(testingSort) {
+      case 'name-asc':        return a.name.localeCompare(b.name);
+      case 'name-desc':       return b.name.localeCompare(a.name);
+      case 'date-asc':        return (a.startDate||'').localeCompare(b.startDate||'');
+      case 'date-desc':       return (b.startDate||'').localeCompare(a.startDate||'');
+      case 'budget-desc':     return (+(b.budget)||0)-(+(a.budget)||0);
+      case 'budget-asc':      return (+(a.budget)||0)-(+(b.budget)||0);
+      case 'spend-desc':      return b._spend - a._spend;
+      case 'spend-asc':       return a._spend - b._spend;
+      case 'rev-desc':        return b._rev - a._rev;
+      case 'rev-asc':         return a._rev - b._rev;
+      case 'roas-desc':       return (b._spend>0?b._rev/b._spend:0)-(a._spend>0?a._rev/a._spend:0);
+      case 'roas-asc':        return (a._spend>0?a._rev/a._spend:0)-(b._spend>0?b._rev/b._spend:0);
+      case 'creatives-desc':  return b._n - a._n;
+      case 'creatives-asc':   return a._n - b._n;
+      default: return 0;
+    }
+  });
 
-    const noProdWarning = !prod ? `
-      <div style="padding:10px 16px;background:rgba(234,179,8,.12);border-top:1px solid rgba(234,179,8,.3);
-                  display:flex;align-items:center;gap:10px;font-size:13px;color:var(--yellow);">
-        <span style="font-size:16px;">⚠️</span>
-        <span><b>Sin producto vinculado</b> — el ROAS, margen y unidades no se pueden calcular.
-          <button class="btn btn-sm" style="margin-left:8px;background:rgba(234,179,8,.2);color:var(--yellow);border:1px solid rgba(234,179,8,.4);"
-            onclick="linkProductToCreative('${c.id}')">Vincular producto</button>
-        </span>
-      </div>` : '';
+  if (!campaigns.length) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><p>Ninguna campaña coincide con los filtros.</p></div>`;
+    return;
+  }
 
-    const infoBar = prod
-      ? `<div style="padding:12px 16px;background:var(--bg3);display:flex;flex-wrap:wrap;gap:24px;font-size:13px;">
-          <span>Producto: <b>${prod.title}</b></span>
-          <span>Precio: <b>${fmtEur(price)}</b></span>
-          <span>COG: <b>${fmtEur(cog)}</b></span>
-          <span>Margen€: <b class="${marginEur>=0?'text-green':'text-red'}">${fmtEur(marginEur)}</b></span>
-          <span>Margen%: <b>${fmtPct(marginPct)}</b></span>
-          <span>Unidades: <b>${units}</b></span>
-          <span>COG Total: <b>${fmtEur(totalCOG)}</b></span>
-          <span>Store Value: <b>${fmtEur(storeValue)}</b></span>
-          <span>ROAS Total: <b class="${roasClass2}">${fmt(totalRoas)}</b></span>
-          <span>Gasto Total: <b>${fmtEur(totalSpend)}</b></span>
-        </div>`
-      : `<div style="padding:12px 16px;background:var(--bg3);display:flex;flex-wrap:wrap;gap:24px;font-size:13px;">
-          <span>ROAS Total: <b class="${roasClass2}">${fmt(totalRoas)}</b></span>
-          <span>Gasto Total: <b>${fmtEur(totalSpend)}</b></span>
-          <span>Ingresos: <b>${fmtEur(totalRev)}</b></span>
-        </div>`;
+  container.innerHTML = campaigns.map(camp => {
+    const prod = getProduct(camp.productId);
+    const creatives = camp.creatives || [];
+    const campSpend = creatives.reduce((s,c)=>s+calcCreativeSpend(c),0);
+    const campRev   = creatives.reduce((s,c)=>s+calcCreativeRevenue(c),0);
+    const campRoas  = campSpend > 0 ? campRev/campSpend : 0;
+    const campBudget = +(camp.budget) || 0;
+    const campUnits = creatives.reduce((s,c)=>{
+      const price = prod ? (+prod.price||0) : 0;
+      return s + calcUnitsFromRev(calcCreativeRevenue(c), price);
+    }, 0);
+    const roasCls = roasClass(campRoas);
+    const semCls  = camp.status==='activa'?'sem-green':camp.status==='pausada'?'sem-red':'sem-red';
+    const campStatusMap = {activa:'badge-green',pausada:'badge-yellow',finalizada:'badge-gray'};
+    const campBadge = `<span class="badge ${campStatusMap[camp.status]||'badge-gray'}">${camp.status||'activa'}</span>`;
+
+    const creativesHtml = creatives.length === 0
+      ? `<tr><td colspan="8" class="text-muted" style="text-align:center;padding:16px;">Sin creativos — añade uno con el botón superior</td></tr>`
+      : creatives.map(c => {
+          const totalRoas  = calcCreativeROAS(c);
+          const totalSpend = calcCreativeSpend(c);
+          const totalRev   = calcCreativeRevenue(c);
+          const price = prod ? (+prod.price||0) : 0;
+          const cog   = prod ? (+prod.cog||0)   : 0;
+          const units = calcUnitsFromRev(totalRev, price);
+          const marginPct = totalRev > 0 ? (totalRev - totalSpend - units*cog)/totalRev*100 : 0;
+          const daysFilled = (c.days||[]).length;
+          const daysDots = Array(7).fill(0).map((_,i)=>{
+            const d = (c.days||[])[i];
+            return `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${d!=null?'var(--accent)':'var(--border)'};margin:0 1px;" title="Día ${i+1}"></span>`;
+          }).join('');
+          return `<tr>
+            <td style="font-weight:600;white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis;">
+              ${c.status==='ganador'
+                ? `<img src="copa producto ganador.png" style="width:12px;height:12px;object-fit:contain;vertical-align:middle;margin-right:4px;" title="Ganador">`
+                : `<span class="semaphore ${c.status==='desactivado'?'sem-red':'sem-green'}" style="display:inline-block;vertical-align:middle;margin-right:4px;" title="${c.status||'en test'}"></span>`
+              }${c.name}
+            </td>
+            <td><span class="badge badge-gray" style="font-size:10px;">${c.format||''}</span></td>
+            <td>${statusBadge(c.status)}</td>
+            <td class="${roasClass(totalRoas)}" style="font-weight:600;">${totalSpend>0?fmt(totalRoas):'—'}</td>
+            <td>${fmtEur(totalSpend)}</td>
+            <td class="text-green">${fmtEur(totalRev)}</td>
+            <td class="${marginPct>=0?'text-green':'text-red'}">${totalRev>0?fmtPct(marginPct):'—'}</td>
+            <td style="white-space:nowrap;">${daysDots}<br><span style="font-size:10px;color:var(--text2);">${daysFilled}/7 días</span></td>
+            <td style="white-space:nowrap;">
+              <button class="btn btn-secondary btn-sm" onclick="openCreativeDays('${camp.id}','${c.id}')" title="Ver detalle 7 días">📊</button>
+              <button class="btn btn-secondary btn-sm" onclick="openCreativeModal('${camp.id}','${c.id}')">✏️</button>
+              <button class="btn btn-danger btn-sm" onclick="deleteTestCreative('${camp.id}','${c.id}')">🗑</button>
+            </td>
+          </tr>`;
+        }).join('');
 
     return `<div class="table-wrap mb24">
-      <div class="table-header flex-between">
-        <div class="flex">
-          <span class="semaphore ${totalRoas>=2?'sem-green':totalRoas>=1?'sem-yellow':'sem-red'}"></span>
-          <h3>${c.name}</h3>
-          <span class="badge badge-gray" style="margin-left:4px;">${c.platform||''}</span>
-          <span class="badge badge-gray">${c.format||''}</span>
-          ${statusBadge(c.status)}
-          ${!prod ? '<span class="badge badge-yellow" style="margin-left:4px;">Sin producto</span>' : ''}
+      <div class="table-header flex-between" style="cursor:pointer;" onclick="toggleTestCampaign('${camp.id}')">
+        <div class="flex" style="flex-wrap:wrap;gap:8px;align-items:center;">
+          <span class="semaphore ${semCls}"></span>
+          <h3 style="margin:0;">${camp.name}</h3>
+          <span class="badge badge-gray">${camp.platform||''}</span>
+          ${campBadge}
+          ${prod ? `<span style="font-size:13px;color:var(--text2);">📦 ${prod.title}</span>` : '<span class="badge badge-yellow">Sin producto</span>'}
+          <span style="font-size:13px;color:var(--text2);">${creatives.length} creativo${creatives.length!==1?'s':''}</span>
+          <span style="font-size:13px;color:var(--text2);">Gasto: <b>${fmtEur(campSpend)}</b></span>
+          <span style="font-size:13px;color:var(--text2);">Ingresos: <b>${fmtEur(campRev)}</b></span>
+          <span style="font-size:13px;">ROAS: <b class="${roasCls}">${campSpend>0?fmt(campRoas):'—'}</b></span>
         </div>
-        <div class="flex">
-          <button class="btn btn-secondary btn-sm" onclick="openCreativeModal('${c.id}')">✏️ Editar</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteCreative('${c.id}')">🗑</button>
+        <div class="flex" style="gap:8px;">
+          <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openCreativeModal('${camp.id}')">+ Creativo</button>
+          <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();openTestCampaignModal('${camp.id}')">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteTestCampaign('${camp.id}')">🗑</button>
+          <span id="tc-arrow-${camp.id}" style="font-size:18px;line-height:1;transition:transform .2s;${openCampaigns.has(camp.id)?'':'transform:rotate(-90deg);'}">▼</span>
         </div>
       </div>
-      ${noProdWarning}
-      ${infoBar}
-      <div style="overflow-x:auto;">
-        <table>
+      ${camp.objective ? `<div style="padding:8px 16px;font-size:12px;color:var(--text2);background:var(--bg3);border-top:1px solid var(--border);">🎯 ${camp.objective}</div>` : ''}
+      <div id="tc-body-${camp.id}" style="${openCampaigns.has(camp.id)?'':'display:none'}">
+        <table style="font-size:12px;">
           <thead><tr>
-            <th colspan="2">Día 1</th><th colspan="2">Día 2</th><th colspan="2">Día 3</th>
-            <th colspan="2">Día 4</th><th colspan="2">Día 5</th><th colspan="2">Día 6</th>
-            <th colspan="2">Día 7</th>
-          </tr>
-          <tr>${Array(7).fill(0).map((_,i)=>`<th>ROAS${i+1}</th><th>M%${i+1}</th>`).join('')}</tr>
-          </thead>
-          <tbody><tr>${daysHtml}${emptyDays}</tr></tbody>
+            <th style="min-width:120px;">Creativo</th>
+            <th>Formato</th><th>Estado</th>
+            <th>ROAS</th><th>Gasto</th><th>Ingresos</th><th>Margen%</th>
+            <th>Días</th><th></th>
+          </tr></thead>
+          <tbody>${creativesHtml}</tbody>
         </table>
       </div>
     </div>`;
   }).join('');
+}
+
+function toggleTestCampaign(campId) {
+  const body  = document.getElementById('tc-body-'+campId);
+  const arrow = document.getElementById('tc-arrow-'+campId);
+  if (!body) return;
+  const hidden = body.style.display === 'none';
+  body.style.display  = hidden ? '' : 'none';
+  if (arrow) arrow.style.transform = hidden ? '' : 'rotate(-90deg)';
+  if (hidden) { openCampaigns.add(campId); } else { openCampaigns.delete(campId); }
 }
 
 function calcCreativeROAS(c) {
@@ -2607,21 +2778,89 @@ function calcCreativeMargin(c) {
   return rev - spend - units*(+prod.cog||0);
 }
 
-function openCreativeModal(id) {
-  const c = id ? state.creatives.find(x=>x.id===id) : null;
+function openTestCampaignModal(campId) {
+  const camp = campId ? (state.testCampaigns||[]).find(x=>x.id===campId) : null;
+  document.getElementById('test-camp-modal-title').textContent = camp ? 'Editar Campaña' : 'Nueva Campaña de Test';
+  document.getElementById('tc-id').value = camp ? camp.id : '';
+  document.getElementById('tc-name').value = camp ? camp.name : '';
+  document.getElementById('tc-platform').value = camp ? camp.platform : 'Meta Ads';
+  document.getElementById('tc-start-date').value = camp ? camp.startDate : today();
+  document.getElementById('tc-status').value = camp ? camp.status : 'activa';
+  document.getElementById('tc-objective').value = camp ? (camp.objective||'') : '';
+  document.getElementById('tc-budget').value = camp ? (camp.budget||'') : '';
+  const prodSel = document.getElementById('tc-product');
+  prodSel.innerHTML = '<option value="">Sin producto</option>' +
+    state.products.map(p=>`<option value="${p.id}" ${camp&&camp.productId===p.id?'selected':''}>${p.title}</option>`).join('');
+  document.getElementById('test-campaign-modal').classList.add('open');
+}
+
+function saveTestCampaign() {
+  const id = document.getElementById('tc-id').value;
+  const data = {
+    name:      document.getElementById('tc-name').value.trim() || 'Campaña sin nombre',
+    productId: document.getElementById('tc-product').value,
+    platform:  document.getElementById('tc-platform').value,
+    startDate: document.getElementById('tc-start-date').value,
+    status:    document.getElementById('tc-status').value,
+    objective: document.getElementById('tc-objective').value.trim(),
+    budget:    parseFloat(document.getElementById('tc-budget').value) || 0
+  };
+  if (!state.testCampaigns) state.testCampaigns = [];
+  if (id) {
+    const camp = state.testCampaigns.find(x=>x.id===id);
+    if (camp) {
+      Object.assign(camp, data);
+      // Propagate productId change to creatives (they inherit from campaign)
+    }
+  } else {
+    const newId = uid();
+    state.testCampaigns.push({id:newId, ...data, creatives:[]});
+    openCampaigns.add(newId);
+  }
+  onStateChanged('creative');
+  closeModal('test-campaign-modal');
+}
+
+function deleteTestCampaign(campId) {
+  if (!confirm('¿Eliminar esta campaña y todos sus creativos?')) return;
+  state.testCampaigns = (state.testCampaigns||[]).filter(x=>x.id!==campId);
+  onStateChanged('creative');
+}
+
+function scaleCreativeBudget(campId, creativeId, pct) {
+  const camp = (state.testCampaigns||[]).find(x=>x.id===campId);
+  if (!camp) return;
+  const c = (camp.creatives||[]).find(x=>x.id===creativeId);
+  if (!c) return;
+  const current = +(c.budget) || 0;
+  if (current <= 0) { alert('El creativo no tiene presupuesto asignado. Edítalo primero.'); return; }
+  const newBudget = Math.round(current * (1 + pct/100) * 100) / 100;
+  const action = pct > 0 ? 'escalado' : 'reducido';
+  if (confirm(`Presupuesto ${action} de ${fmtEur(current)} → ${fmtEur(newBudget)} (${pct>0?'+':''}${pct}%)`)) {
+    c.budget = newBudget;
+    onStateChanged('creative');
+  }
+}
+
+function openCreativeModal(campId, creativeId) {
+  const camp = (state.testCampaigns||[]).find(x=>x.id===campId);
+  const c = creativeId && camp ? (camp.creatives||[]).find(x=>x.id===creativeId) : null;
   document.getElementById('creative-modal-title').textContent = c ? 'Editar Creativo' : 'Nuevo Creativo';
   document.getElementById('cm-id').value = c ? c.id : '';
-  document.getElementById('cm-name').value = c ? c.name : '';
-  document.getElementById('cm-platform').value = c ? c.platform : 'Facebook';
+  document.getElementById('cm-campaign-id').value = campId || '';
   document.getElementById('cm-format').value = c ? c.format : 'estático';
   document.getElementById('cm-date').value = c ? c.date : today();
   document.getElementById('cm-url').value = c ? c.url||'' : '';
-  document.getElementById('cm-budget').value = c ? c.budget||'' : '';
   document.getElementById('cm-status').value = c ? c.status : 'en test';
+  document.getElementById('cm-name').value = c ? c.name : '';
 
-  const prodSel = document.getElementById('cm-product');
-  prodSel.innerHTML = '<option value="">Sin producto</option>' +
-    state.products.map(p=>`<option value="${p.id}" ${c&&c.productId===p.id?'selected':''}>${p.title}</option>`).join('');
+  // Show campaign context info
+  const infoEl = document.getElementById('cm-campaign-info');
+  if (infoEl && camp) {
+    const prod = getProduct(camp.productId);
+    infoEl.innerHTML = `Campaña: <b>${camp.name}</b> · Plataforma: <b>${camp.platform}</b>${prod?` · Producto: <b>${prod.title}</b>`:''}`;
+    infoEl.style.display = '';
+  } else if (infoEl) { infoEl.style.display = 'none'; }
 
   // Days table
   const tbody = document.getElementById('cm-days-table');
@@ -2640,75 +2879,119 @@ function openCreativeModal(id) {
   document.getElementById('creative-modal').classList.add('open');
 }
 
-// Opens the creative modal and immediately focuses + highlights the product selector
-function linkProductToCreative(id) {
-  openCreativeModal(id);
-  setTimeout(() => {
-    const sel = document.getElementById('cm-product');
-    if (!sel) return;
-    sel.focus();
-    // Scroll the modal body so the product field is visible
-    sel.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    // Pulse highlight so the user knows exactly where to look
-    sel.style.transition = 'border-color .2s, box-shadow .2s';
-    sel.style.borderColor = 'var(--yellow)';
-    sel.style.boxShadow  = '0 0 0 3px rgba(234,179,8,.35)';
-    setTimeout(() => {
-      sel.style.borderColor = '';
-      sel.style.boxShadow  = '';
-    }, 2500);
-  }, 120); // wait for modal to render
-}
-
 function updateDayRoas(i) {
   const rows = document.querySelectorAll('#cm-days-table tr');
   const row = rows[i];
   if (!row) return;
-  const spend = parseFloat(row.querySelectorAll('input')[0].value)||0;
-  const rev = parseFloat(row.querySelectorAll('input')[1].value)||0;
-  const roas = spend > 0 ? rev/spend : 0;
-  const prodId = document.getElementById('cm-product').value;
-  const prod = getProduct(prodId);
-  const price = prod ? (+prod.price||0) : 0;
-  const cog = prod ? (+prod.cog||0) : 0;
-  const units = calcUnitsFromRev(rev, price);
-  const mp = rev > 0 ? (rev - spend - units*cog)/rev*100 : 0;
+  const spend = parseFloat(row.querySelector('.day-spend').value)||0;
+  const rev   = parseFloat(row.querySelector('.day-revenue').value)||0;
+  const roas  = spend > 0 ? rev/spend : 0;
+  const campId = document.getElementById('cm-campaign-id').value;
+  const camp   = (state.testCampaigns||[]).find(x=>x.id===campId);
+  const prod   = camp ? getProduct(camp.productId) : null;
+  const price  = prod ? (+prod.price||0) : 0;
+  const cog    = prod ? (+prod.cog||0)   : 0;
+  const units  = calcUnitsFromRev(rev, price);
+  const mp     = rev > 0 ? (rev - spend - units*cog)/rev*100 : 0;
   const roasEl = document.getElementById('day-roas-'+i);
-  const mpEl = document.getElementById('day-margin-'+i);
+  const mpEl   = document.getElementById('day-margin-'+i);
   if (roasEl) { roasEl.className = roasClass(roas); roasEl.textContent = spend>0?fmt(roas):'—'; }
-  if (mpEl) { mpEl.className = mp>=0?'text-green':'text-red'; mpEl.textContent = rev>0?fmtPct(mp):'—'; }
+  if (mpEl)   { mpEl.className = mp>=0?'text-green':'text-red'; mpEl.textContent = rev>0?fmtPct(mp):'—'; }
 }
 
 function saveCreative() {
-  const id = document.getElementById('cm-id').value;
-  const rows = document.querySelectorAll('#cm-days-table tr');
-  const days = Array.from(rows).map(row => {
-    const inputs = row.querySelectorAll('input');
-    return { spend: parseFloat(inputs[0].value)||0, revenue: parseFloat(inputs[1].value)||0 };
-  }).filter(d=>d.spend>0||d.revenue>0);
+  const id     = document.getElementById('cm-id').value;
+  const campId = document.getElementById('cm-campaign-id').value;
+  const rows   = document.querySelectorAll('#cm-days-table tr');
+  const days   = Array.from(rows).map(row => {
+    const spendStr   = row.querySelector('.day-spend').value;
+    const revenueStr = row.querySelector('.day-revenue').value;
+    return { spend: parseFloat(spendStr)||0, revenue: parseFloat(revenueStr)||0, _touched: spendStr!==''||revenueStr!=='' };
+  }).filter(d=>d._touched).map(({_touched,...d})=>d);
 
   const data = {
-    name: document.getElementById('cm-name').value,
-    productId: document.getElementById('cm-product').value,
-    platform: document.getElementById('cm-platform').value,
+    name:   document.getElementById('cm-name').value.trim() || 'Creativo sin nombre',
     format: document.getElementById('cm-format').value,
-    date: document.getElementById('cm-date').value,
-    url: document.getElementById('cm-url').value,
-    budget: parseFloat(document.getElementById('cm-budget').value)||0,
+    date:   document.getElementById('cm-date').value,
+    url:    document.getElementById('cm-url').value,
     status: document.getElementById('cm-status').value,
     days
   };
 
-  if (id) { const c = state.creatives.find(x=>x.id===id); if(c) Object.assign(c,data); }
-  else { state.creatives.push({id:uid(),...data}); }
+  if (!state.testCampaigns) state.testCampaigns = [];
+  const camp = state.testCampaigns.find(x=>x.id===campId);
+  if (!camp) return;
+  if (!camp.creatives) camp.creatives = [];
+
+  if (id) {
+    const c = camp.creatives.find(x=>x.id===id);
+    if (c) Object.assign(c, data);
+  } else {
+    camp.creatives.push({id:uid(), ...data});
+  }
   onStateChanged('creative');
   closeModal('creative-modal');
 }
 
-function deleteCreative(id) {
+function deleteTestCreative(campId, creativeId) {
   if (!confirm('¿Eliminar este creativo?')) return;
-  state.creatives = state.creatives.filter(c=>c.id!==id);
+  const camp = (state.testCampaigns||[]).find(x=>x.id===campId);
+  if (camp) camp.creatives = (camp.creatives||[]).filter(x=>x.id!==creativeId);
   onStateChanged('creative');
+}
+
+function openCreativeDays(campId, creativeId) {
+  const camp = (state.testCampaigns||[]).find(x=>x.id===campId);
+  const c = camp ? (camp.creatives||[]).find(x=>x.id===creativeId) : null;
+  if (!c) return;
+  const prod  = getProduct(camp.productId);
+  const price = prod ? (+prod.price||0) : 0;
+  const cog   = prod ? (+prod.cog||0)   : 0;
+
+  document.getElementById('creative-days-title').textContent = c.name;
+  document.getElementById('creative-days-subtitle').textContent =
+    `${camp.name} · ${camp.platform} · ${c.format||''}`;
+
+  const totalSpend = calcCreativeSpend(c);
+  const totalRev   = calcCreativeRevenue(c);
+  const totalRoas  = totalSpend > 0 ? totalRev/totalSpend : 0;
+  const units      = calcUnitsFromRev(totalRev, price);
+  const totalMp    = totalRev > 0 ? (totalRev - totalSpend - units*cog)/totalRev*100 : 0;
+  document.getElementById('creative-days-stats').innerHTML =
+    `<span>Gasto total: <b>${fmtEur(totalSpend)}</b></span>
+     <span>Ingresos total: <b class="text-green">${fmtEur(totalRev)}</b></span>
+     <span>ROAS: <b class="${roasClass(totalRoas)}">${totalSpend>0?fmt(totalRoas):'—'}</b></span>
+     <span>Margen%: <b class="${totalMp>=0?'text-green':'text-red'}">${totalRev>0?fmtPct(totalMp):'—'}</b></span>
+     ${prod?`<span>Producto: <b>${prod.title}</b></span>`:''}`;
+
+  const tbody = document.getElementById('creative-days-tbody');
+  tbody.innerHTML = Array(7).fill(0).map((_,i) => {
+    const d     = (c.days||[])[i] || {spend:0,revenue:0};
+    const spend = +d.spend||0;
+    const rev   = +d.revenue||0;
+    const roas  = spend > 0 ? rev/spend : 0;
+    const u     = calcUnitsFromRev(rev, price);
+    const mp    = rev > 0 ? (rev - spend - u*cog)/rev*100 : 0;
+    let dateStr = '—';
+    if (c.date) {
+      const dt = new Date(c.date + 'T00:00:00');
+      dt.setDate(dt.getDate() + i);
+      dateStr = dt.toISOString().slice(5,10);
+    }
+    const hasData = spend > 0 || rev > 0;
+    return `<tr style="opacity:${hasData?1:.4};">
+      <td style="font-weight:600;">Día ${i+1}</td>
+      <td style="color:var(--text2);">${dateStr}</td>
+      <td>${hasData?fmtEur(spend):'—'}</td>
+      <td class="${rev>0?'text-green':''}">${hasData?fmtEur(rev):'—'}</td>
+      <td class="${roasClass(roas)}">${spend>0?fmt(roas):'—'}</td>
+      <td class="${mp>=0?'text-green':'text-red'}">${rev>0?fmtPct(mp):'—'}</td>
+    </tr>`;
+  }).join('');
+
+  const editBtn = document.getElementById('creative-days-edit-btn');
+  editBtn.onclick = () => { closeModal('creative-days-modal'); openCreativeModal(campId, creativeId); };
+  document.getElementById('creative-days-modal').classList.add('open');
 }
 
 // ============================================================
@@ -2933,7 +3216,7 @@ function financeTab(tab) {
   document.querySelectorAll('.tabs .tab').forEach((el,i) => {
     el.classList.toggle('active', tabs2[i]===tab);
   });
-  if (tab==='monthly') renderMonthlySummary();
+  if (tab==='monthly') requestAnimationFrame(() => renderMonthlySummary());
   if (tab==='invoices') renderInvoices();
 }
 
@@ -2987,64 +3270,42 @@ function renderFinanceDaily() {
     const cogsPct  = rev > 0 ? cogs/rev*100 : 0;
     const adsPct   = rev > 0 ? ads/rev*100 : 0;
     const com3     = rev*0.03;
-    const com6     = rev*0.06;
+
     const profit   = rev - cogs - ads - com3 - cf;
     const profitPct = rev > 0 ? profit/rev*100 : 0;
     const roas     = ads > 0 ? rev/ads : 0;
 
-    // Each editable cell shows the combined total prominently.
-    // When auto data exists, a ⚡ line shows the auto portion and the
-    // manual input remains for adding a manual override.
-    const revCell = autoRev > 0
-      ? `<b style="font-size:13px;">${fmtEur(rev)}</b>
-         <div style="font-size:10px;color:var(--accent2);margin:1px 0;">⚡ auto ${fmtEur(autoRev)}</div>
-         <input type="number" value="${d.rev||''}" placeholder="+ manual"
-           onchange="updateDay('${ym}','${d.date}','rev',this.value)"
-           style="width:72px;font-size:11px;" title="Ingresos manuales (el auto se suma automáticamente)">`
-      : `<input type="number" value="${d.rev||''}" placeholder="0"
-           onchange="updateDay('${ym}','${d.date}','rev',this.value)" style="width:80px;">`;
+    const mkCell = (total, autoVal, manualVal, field, w=50) =>
+      autoVal > 0
+        ? `<div class="auto-cell"><b>${fmtEur(total)}</b><span class="auto-tag">⚡${fmtEur(autoVal)}</span>
+           <input type="number" value="${manualVal||''}" placeholder="+manual"
+             onchange="updateDay('${ym}','${d.date}','${field}',this.value)"
+             style="width:${w}px;" title="Manual (auto se suma)"></div>`
+        : `<input type="number" value="${manualVal||''}" placeholder="0"
+             onchange="updateDay('${ym}','${d.date}','${field}',this.value)" style="width:${w}px;">`;
 
-    const cogsCell = autoCogs > 0
-      ? `<b style="font-size:13px;">${fmtEur(cogs)}</b>
-         <div style="font-size:10px;color:var(--accent2);margin:1px 0;">⚡ auto ${fmtEur(autoCogs)}</div>
-         <input type="number" value="${d.cogs||''}" placeholder="+ manual"
-           onchange="updateDay('${ym}','${d.date}','cogs',this.value)"
-           style="width:72px;font-size:11px;" title="COGS manual (el auto se suma automáticamente)">`
-      : `<input type="number" value="${d.cogs||''}" placeholder="0"
-           onchange="updateDay('${ym}','${d.date}','cogs',this.value)" style="width:80px;">`;
-
-    const adsCell = autoAds > 0
-      ? `<b style="font-size:13px;">${fmtEur(ads)}</b>
-         <div style="font-size:10px;color:var(--accent2);margin:1px 0;">⚡ auto ${fmtEur(autoAds)}</div>
-         <input type="number" value="${d.adSpend||''}" placeholder="+ manual"
-           onchange="updateDay('${ym}','${d.date}','adSpend',this.value)"
-           style="width:72px;font-size:11px;" title="Gasto Ads manual (el auto se suma automáticamente)">`
-      : `<input type="number" value="${d.adSpend||''}" placeholder="0"
-           onchange="updateDay('${ym}','${d.date}','adSpend',this.value)" style="width:80px;">`;
-
-    const ordCell = autoOrd > 0
-      ? `<b style="font-size:13px;">${orders}</b>
-         <div style="font-size:10px;color:var(--accent2);margin:1px 0;">⚡ auto ${autoOrd}</div>
-         <input type="number" value="${d.orders||''}" placeholder="+ manual"
-           onchange="updateDay('${ym}','${d.date}','orders',this.value)"
-           style="width:55px;font-size:11px;" title="Pedidos manuales">`
-      : `<input type="number" value="${d.orders||''}" placeholder="0"
-           onchange="updateDay('${ym}','${d.date}','orders',this.value)" style="width:60px;">`;
+    const mkOrdCell = (total, autoVal, manualVal) =>
+      autoVal > 0
+        ? `<div class="auto-cell"><b>${total}</b><span class="auto-tag">⚡${autoVal}</span>
+           <input type="number" value="${manualVal||''}" placeholder="+m"
+             onchange="updateDay('${ym}','${d.date}','orders',this.value)"
+             style="width:38px;" title="Pedidos manuales"></div>`
+        : `<input type="number" value="${manualVal||''}" placeholder="0"
+             onchange="updateDay('${ym}','${d.date}','orders',this.value)" style="width:42px;">`;
 
     return `<tr>
-      <td>${d.date.slice(5)}</td>
-      <td>${revCell}</td>
-      <td><input type="number" value="${d.cpc||''}" placeholder="0" onchange="updateDay('${ym}','${d.date}','cpc',this.value)" style="width:60px;"></td>
-      <td><input type="number" value="${d.visits||''}" placeholder="0" onchange="updateDay('${ym}','${d.date}','visits',this.value)" style="width:70px;"></td>
-      <td>${ordCell}</td>
+      <td style="white-space:nowrap;font-weight:600;">${d.date.slice(5)}</td>
+      <td>${mkCell(rev, autoRev, d.rev, 'rev')}</td>
+      <td><input type="number" value="${d.cpc||''}" placeholder="0" onchange="updateDay('${ym}','${d.date}','cpc',this.value)" style="width:42px;"></td>
+      <td><input type="number" value="${d.visits||''}" placeholder="0" onchange="updateDay('${ym}','${d.date}','visits',this.value)" style="width:50px;"></td>
+      <td>${mkOrdCell(orders, autoOrd, d.orders)}</td>
       <td>${fmtEur(aov)}</td>
       <td class="${cr>=2?'text-green':cr>=1?'text-yellow':'text-red'}">${fmtPct(cr)}</td>
-      <td>${cogsCell}</td>
+      <td>${mkCell(cogs, autoCogs, d.cogs, 'cogs')}</td>
       <td class="${cogsPct<=40?'text-green':cogsPct<=60?'text-yellow':'text-red'}">${fmtPct(cogsPct)}</td>
-      <td>${adsCell}</td>
+      <td>${mkCell(ads, autoAds, d.adSpend, 'adSpend')}</td>
       <td class="${adsPct<=30?'text-green':adsPct<=50?'text-yellow':'text-red'}">${fmtPct(adsPct)}</td>
       <td>${fmtEur(com3)}</td>
-      <td>${fmtEur(com6)}</td>
       <td>${fmtEur(cf)}</td>
       <td class="${profit>=0?'text-green':'text-red'}" style="font-weight:700;">${fmtEur(profit)}</td>
       <td class="${roasClass(roas)}">${roas>0?fmt(roas):'—'}</td>
@@ -3067,7 +3328,7 @@ function renderFinanceDaily() {
   tfooter.innerHTML = `<td>TOTAL</td><td>${fmtEur(totRev)}</td><td>—</td><td>—</td><td>${totOrders}</td>
     <td>—</td><td>—</td><td>${fmtEur(totCogs)}</td><td>${fmtPct(totRev?totCogs/totRev*100:0)}</td>
     <td>${fmtEur(totAds)}</td><td>${fmtPct(totRev?totAds/totRev*100:0)}</td>
-    <td>${fmtEur(totCom3)}</td><td>${fmtEur(totRev*0.06)}</td><td>${fmtEur(totCF)}</td>
+    <td>${fmtEur(totCom3)}</td><td>${fmtEur(totCF)}</td>
     <td class="${totProfit>=0?'text-green':'text-red'}">${fmtEur(totProfit)}</td>
     <td class="${roasClass(totRoas)}">${totRoas>0?fmt(totRoas):'—'}</td>
     <td class="${totProfitPct>=10?'text-green':totProfitPct>=0?'text-yellow':'text-red'}">${totRev>0?fmtPct(totProfitPct):'—'}</td>
